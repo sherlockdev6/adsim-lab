@@ -510,7 +510,7 @@ export async function POST(
         return NextResponse.json(campaign, { status: 201 });
     }
 
-    // Create run
+    // Create run (with campaign)
     const runMatch = fullPath.match(/^\/accounts\/([^/]+)\/campaigns\/([^/]+)\/runs$/);
     if (runMatch) {
         const campaignId = runMatch[2];
@@ -526,6 +526,30 @@ export async function POST(
             current_day: 0,
             duration_days: body.duration_days || 7,
             rng_seed: Math.floor(Math.random() * 100000),
+            created_at: new Date().toISOString(),
+        };
+        storage.runs.push(run);
+
+        return NextResponse.json(run, { status: 201 });
+    }
+
+    // Create run directly from account (simplified - no campaign required)
+    const directRunMatch = fullPath.match(/^\/accounts\/([^/]+)\/runs$/);
+    if (directRunMatch) {
+        const accountId = directRunMatch[1];
+        const account = storage.accounts.find(a => a.id === accountId);
+        if (!account) {
+            return NextResponse.json({ detail: 'Account not found' }, { status: 404 });
+        }
+
+        const run = {
+            id: uuid(),
+            account_id: accountId,
+            scenario_slug: body.scenario_slug || account.scenario_slug,
+            status: 'pending',
+            current_day: 0,
+            duration_days: body.duration_days || 7,
+            rng_seed: body.seed || Math.floor(Math.random() * 100000),
             created_at: new Date().toISOString(),
         };
         storage.runs.push(run);
