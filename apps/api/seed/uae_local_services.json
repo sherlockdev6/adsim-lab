@@ -1,0 +1,155 @@
+{
+    "slug": "uae-local-services",
+    "name": "UAE Local Services Leads",
+    "market": "UAE",
+    "description": "Home services market in Dubai and Sharjah. Medium CPC ($1-5), moderate volume, mixed intent. Consistent year-round with Ramadan dip.",
+    "demand_config": {
+        "daily_baseline": 15000,
+        "intent_split": {
+            "high": 0.25,
+            "medium": 0.45,
+            "low": 0.30
+        },
+        "device_split": {
+            "mobile": 0.75,
+            "desktop": 0.25
+        },
+        "geo_split": {
+            "dubai": 0.55,
+            "sharjah": 0.45
+        },
+        "time_split": {
+            "morning": 0.25,
+            "afternoon": 0.25,
+            "evening": 0.30,
+            "night": 0.20
+        }
+    },
+    "ctr_cvr_config": {
+        "base_ctr_by_intent": {
+            "high": 0.06,
+            "medium": 0.035,
+            "low": 0.012
+        },
+        "base_cvr_by_intent": {
+            "high": 0.18,
+            "medium": 0.08,
+            "low": 0.02
+        },
+        "position_multipliers": {
+            "1": 1.0,
+            "2": 0.82,
+            "3": 0.68,
+            "4": 0.52,
+            "5": 0.38,
+            "6": 0.28,
+            "7": 0.20,
+            "8": 0.12
+        },
+        "device_multipliers": {
+            "mobile": 1.05,
+            "desktop": 0.95
+        }
+    },
+    "cpc_anchors": {
+        "market_bid_by_intent": {
+            "high": 4.5,
+            "medium": 2.5,
+            "low": 1.0
+        },
+        "currency": "USD",
+        "min_cpc": 0.20,
+        "max_cpc": 10.0
+    },
+    "tracking_loss_rate": 0.08,
+    "fraud_rate": 0.06,
+    "seasonality": {
+        "monthly_factors": [
+            1.0,
+            1.0,
+            0.85,
+            0.85,
+            1.1,
+            1.1,
+            1.0,
+            1.0,
+            1.0,
+            1.05,
+            1.05,
+            0.9
+        ],
+        "day_of_week_factors": [
+            0.80,
+            0.95,
+            1.0,
+            1.0,
+            1.0,
+            1.15,
+            1.10
+        ]
+    },
+    "event_shocks": [
+        {
+            "name": "Ramadan",
+            "day_range": [
+                60,
+                90
+            ],
+            "demand_mult": 0.7,
+            "cpc_mult": 0.85
+        },
+        {
+            "name": "Eid Al Fitr",
+            "day_range": [
+                91,
+                95
+            ],
+            "demand_mult": 1.4,
+            "cpc_mult": 1.1
+        }
+    ],
+    "competitor_mix": {
+        "aggressive": 0.25,
+        "defensive": 0.35,
+        "neutral": 0.40
+    },
+    "competitor_archetypes": {
+        "aggressive": {
+            "bid_multiplier": 1.25,
+            "budget_multiplier": 1.4,
+            "quality_score_range": [
+                4,
+                7
+            ]
+        },
+        "defensive": {
+            "bid_multiplier": 0.85,
+            "budget_multiplier": 0.75,
+            "quality_score_range": [
+                6,
+                8
+            ]
+        },
+        "neutral": {
+            "bid_multiplier": 1.0,
+            "budget_multiplier": 1.0,
+            "quality_score_range": [
+                5,
+                7
+            ]
+        }
+    },
+    "quality_score_config": {
+        "weights": {
+            "ectr": 0.40,
+            "relevance": 0.35,
+            "landing": 0.25
+        },
+        "ema_alpha": 0.1,
+        "learning_phase_days": 7
+    },
+    "fatigue_config": {
+        "scale": 1200,
+        "decay_rate": 0.92
+    }
+}

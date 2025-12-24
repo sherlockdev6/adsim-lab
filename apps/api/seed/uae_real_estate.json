@@ -1,0 +1,155 @@
+{
+    "slug": "uae-real-estate",
+    "name": "UAE Dubai Real Estate Leads",
+    "market": "UAE",
+    "description": "High-value property leads in Dubai and Abu Dhabi. High CPC ($5-15), lower volume, higher intent. Seasonal peaks during winter months.",
+    "demand_config": {
+        "daily_baseline": 8000,
+        "intent_split": {
+            "high": 0.15,
+            "medium": 0.35,
+            "low": 0.50
+        },
+        "device_split": {
+            "mobile": 0.65,
+            "desktop": 0.35
+        },
+        "geo_split": {
+            "dubai": 0.70,
+            "abu_dhabi": 0.30
+        },
+        "time_split": {
+            "morning": 0.20,
+            "afternoon": 0.30,
+            "evening": 0.35,
+            "night": 0.15
+        }
+    },
+    "ctr_cvr_config": {
+        "base_ctr_by_intent": {
+            "high": 0.08,
+            "medium": 0.04,
+            "low": 0.015
+        },
+        "base_cvr_by_intent": {
+            "high": 0.12,
+            "medium": 0.05,
+            "low": 0.01
+        },
+        "position_multipliers": {
+            "1": 1.0,
+            "2": 0.85,
+            "3": 0.70,
+            "4": 0.55,
+            "5": 0.40,
+            "6": 0.30,
+            "7": 0.22,
+            "8": 0.15
+        },
+        "device_multipliers": {
+            "mobile": 0.90,
+            "desktop": 1.10
+        }
+    },
+    "cpc_anchors": {
+        "market_bid_by_intent": {
+            "high": 12.0,
+            "medium": 7.0,
+            "low": 3.5
+        },
+        "currency": "USD",
+        "min_cpc": 0.50,
+        "max_cpc": 25.0
+    },
+    "tracking_loss_rate": 0.12,
+    "fraud_rate": 0.04,
+    "seasonality": {
+        "monthly_factors": [
+            1.1,
+            1.15,
+            1.0,
+            0.9,
+            0.8,
+            0.7,
+            0.7,
+            0.75,
+            0.9,
+            1.0,
+            1.1,
+            1.2
+        ],
+        "day_of_week_factors": [
+            0.85,
+            1.0,
+            1.0,
+            1.0,
+            1.05,
+            1.1,
+            0.95
+        ]
+    },
+    "event_shocks": [
+        {
+            "name": "Dubai Property Show",
+            "day_range": [
+                45,
+                52
+            ],
+            "demand_mult": 1.4,
+            "cpc_mult": 1.2
+        },
+        {
+            "name": "Year End Rush",
+            "day_range": [
+                350,
+                365
+            ],
+            "demand_mult": 1.3,
+            "cpc_mult": 1.15
+        }
+    ],
+    "competitor_mix": {
+        "aggressive": 0.30,
+        "defensive": 0.40,
+        "neutral": 0.30
+    },
+    "competitor_archetypes": {
+        "aggressive": {
+            "bid_multiplier": 1.3,
+            "budget_multiplier": 1.5,
+            "quality_score_range": [
+                5,
+                8
+            ]
+        },
+        "defensive": {
+            "bid_multiplier": 0.9,
+            "budget_multiplier": 0.8,
+            "quality_score_range": [
+                6,
+                9
+            ]
+        },
+        "neutral": {
+            "bid_multiplier": 1.0,
+            "budget_multiplier": 1.0,
+            "quality_score_range": [
+                5,
+                7
+            ]
+        }
+    },
+    "quality_score_config": {
+        "weights": {
+            "ectr": 0.40,
+            "relevance": 0.35,
+            "landing": 0.25
+        },
+        "ema_alpha": 0.1,
+        "learning_phase_days": 7
+    },
+    "fatigue_config": {
+        "scale": 1200,
+        "decay_rate": 0.92
+    }
+}
