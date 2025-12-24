@@ -372,8 +372,8 @@ export async function GET(
             } : null,
         };
 
-        // Build metric changes
-        function buildMetricChange(prevVal: number, currVal: number, metricName: string) {
+        // Build metric changes - using arrow function to avoid ES5 strict mode error
+        const buildMetricChange = (prevVal: number, currVal: number, metricName: string) => {
             const prev = prevVal || currVal;
             const changePercent = prev === 0 ? 0 : ((currVal - prev) / prev) * 100;
             const direction = Math.abs(changePercent) < 1 ? 'flat' : (changePercent > 0 ? 'up' : 'down');
@@ -404,7 +404,7 @@ export async function GET(
                     }
                 ]
             };
-        }
+        };
 
         return NextResponse.json({
             run_id: runId,
