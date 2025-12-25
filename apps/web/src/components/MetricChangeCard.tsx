@@ -101,7 +101,7 @@ export default function MetricChangeCard({
                                 gap: '2px',
                             }}
                         >
-                            <ArrowIcon size={14} />{Math.abs(changePercent).toFixed(1)}%
+                            <ArrowIcon size={14} />{Math.abs(changePercent || 0).toFixed(1)}%
                         </span>
                     </div>
                 </div>

@@ -123,11 +123,11 @@ export default function CausalInsightsPanel({ runId, selectedDay, onDayChange }:
 
     // Metric display config
     const metricConfig: Record<string, { label: string; format: (v: number) => string; goodDirection: 'up' | 'down' }> = {
-        cpc: { label: 'Cost per Click', format: (v) => `$${v.toFixed(2)}`, goodDirection: 'down' },
-        ctr: { label: 'Click-Through Rate', format: (v) => `${(v * 100).toFixed(2)}%`, goodDirection: 'up' },
-        cvr: { label: 'Conversion Rate', format: (v) => `${(v * 100).toFixed(2)}%`, goodDirection: 'up' },
-        conversions: { label: 'Conversions', format: (v) => Math.round(v).toString(), goodDirection: 'up' },
-        impression_share: { label: 'Impression Share', format: (v) => `${(v * 100).toFixed(0)}%`, goodDirection: 'up' },
+        cpc: { label: 'Cost per Click', format: (v) => `$${(v || 0).toFixed(2)}`, goodDirection: 'down' },
+        ctr: { label: 'Click-Through Rate', format: (v) => `${((v || 0) * 100).toFixed(2)}%`, goodDirection: 'up' },
+        cvr: { label: 'Conversion Rate', format: (v) => `${((v || 0) * 100).toFixed(2)}%`, goodDirection: 'up' },
+        conversions: { label: 'Conversions', format: (v) => Math.round(v || 0).toString(), goodDirection: 'up' },
+        impression_share: { label: 'Impression Share', format: (v) => `${((v || 0) * 100).toFixed(0)}%`, goodDirection: 'up' },
     };
 
     return (
