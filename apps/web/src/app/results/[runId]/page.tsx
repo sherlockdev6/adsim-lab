@@ -191,12 +191,12 @@ export default function ResultsPage() {
                 </div>
 
                 {/* Header */}
-                <div className="flex items-center justify-between" style={{ marginBottom: 'var(--space-6)' }}>
+                <div className="flex items-center justify-between" style={{ marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
                     <div>
                         <h1 style={{ marginBottom: 'var(--space-1)' }}>Simulation Results</h1>
                         <p className="text-muted text-sm font-mono">Run #{runId?.slice(0, 8)}</p>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4" style={{ flexWrap: 'wrap' }}>
                         {data && (
                             <>
                                 <div className="flex items-center gap-3">

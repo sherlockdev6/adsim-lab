@@ -506,11 +506,13 @@ a:hover {
 }
 
 .btn-group-connected {
+  display: flex;
   gap: 0;
 }
 
 .btn-group-connected .btn {
   border-radius: 0;
+  flex: 1;
 }
 
 .btn-group-connected .btn:first-child {
@@ -1135,6 +1137,12 @@ select.input {
   gap: var(--space-6);
 }
 
+@media (max-width: 1200px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr 340px;
+  }
+}
+
 @media (max-width: 1024px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
@@ -1145,12 +1153,93 @@ select.input {
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
+  min-width: 0;
+  /* Prevent content overflow */
 }
 
 .dashboard-sidebar {
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
+}
+
+/* Mobile responsive overrides */
+@media (max-width: 768px) {
+  .container {
+    padding: 0 var(--space-4);
+  }
+
+  h1 {
+    font-size: 1.5rem;
+  }
+
+  .nav-content {
+    height: 56px;
+  }
+
+  .nav-logo {
+    font-size: 1rem;
+  }
+
+  .nav-logo::before {
+    width: 24px;
+    height: 24px;
+  }
+
+  .btn-group {
+    flex-wrap: wrap;
+  }
+
+  .metric-card {
+    padding: var(--space-4);
+  }
+
+  .metric-value {
+    font-size: 1.25rem;
+  }
+
+  .card {
+    padding: var(--space-4);
+  }
+
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+
+  /* Chart container height for mobile */
+  .chart-container {
+    height: 250px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 0 var(--space-3);
+  }
+
+  h1 {
+    font-size: 1.25rem;
+  }
+
+  .breadcrumbs {
+    display: none;
+  }
+
+  .btn {
+    padding: var(--space-2) var(--space-3);
+    font-size: 0.8125rem;
+  }
+
+  .btn-sm {
+    padding: var(--space-1) var(--space-2);
+    font-size: 0.6875rem;
+  }
+
+  .metric-value {
+    font-size: 1.125rem;
+  }
 }
 
 /* ===================================
