@@ -12,7 +12,12 @@ import CausalInsightsPanel from '@/components/CausalInsightsPanel';
 import WastedSpendCard from '@/components/WastedSpendCard';
 import HarmfulQueriesWidget from '@/components/HarmfulQueriesWidget';
 import NegativeSuggestions from '@/components/NegativeSuggestions';
-import { Search, Lightbulb, MapPin, Check, X, Info, BarChart3 } from 'lucide-react';
+import DecisionCheckpointModal from '@/components/DecisionCheckpointModal';
+import DecisionHistoryPanel from '@/components/DecisionHistoryPanel';
+import OwnershipSummary from '@/components/OwnershipSummary';
+import { DecisionSet, UserLevel, defaultDecisionSet, RunDecision } from '@/types/decision-types';
+import { saveRunDecision, getLatestDecision, getRunDecisions } from '@/lib/decision-storage';
+import { Search, Lightbulb, MapPin, Check, X, Info, BarChart3, Settings } from 'lucide-react';
 
 interface DailyResult {
     day_number: number;
@@ -92,6 +97,21 @@ export default function ResultsPage() {
     const [activeTab, setActiveTab] = useState<'coaching' | 'causal'>('causal');
     const [toasts, setToasts] = useState<Array<{ id: number; message: string; type: 'success' | 'error' | 'info' }>>([]);
 
+    // Decision system state
+    const [showDecisionModal, setShowDecisionModal] = useState(false);
+    const [pendingDays, setPendingDays] = useState<number>(1);
+    const [userLevel, setUserLevel] = useState<UserLevel>('beginner');
+    const [latestDecision, setLatestDecision] = useState<RunDecision | null>(null);
+    const [showOwnershipSummary, setShowOwnershipSummary] = useState(false);
+
+    // Load latest decision on mount
+    useEffect(() => {
+        const decision = getLatestDecision(runId);
+        if (decision) {
+            setLatestDecision(decision);
+        }
+    }, [runId]);
+
     const addToast = useCallback((message: string, type: 'success' | 'error' | 'info') => {
         const id = Date.now();
         setToasts(prev => [...prev, { id, message, type }]);
@@ -163,6 +183,34 @@ export default function ResultsPage() {
     const isRunning = simulateDayMutation.isPending || simulateMultipleMutation.isPending;
     const isComplete = data?.status === 'completed';
 
+    // Handle decision-gated simulation start
+    const handleRunRequest = (days: number) => {
+        setPendingDays(days);
+        setShowDecisionModal(true);
+    };
+
+    // Handle decision confirmation
+    const handleDecisionConfirm = (decisions: DecisionSet) => {
+        setShowDecisionModal(false);
+
+        // Save the decision
+        const currentDay = (data?.current_day || 0) + 1;
+        const savedDecision = saveRunDecision(runId, currentDay, decisions, userLevel);
+        setLatestDecision(savedDecision);
+
+        // Start simulation
+        if (pendingDays === 1) {
+            simulateDayMutation.mutate();
+        } else {
+            simulateMultipleMutation.mutate(pendingDays);
+        }
+
+        // Show ownership summary after completion
+        setShowOwnershipSummary(true);
+
+        addToast('Decision recorded - simulation starting!', 'info');
+    };
+
     // Handle chart click
     const handleChartClick = (dayNumber: number) => {
         setSelectedDay(dayNumber);
@@ -223,7 +271,7 @@ export default function ResultsPage() {
                             <div className="btn-group">
                                 <button
                                     className="btn btn-primary"
-                                    onClick={() => simulateDayMutation.mutate()}
+                                    onClick={() => handleRunRequest(1)}
                                     disabled={isRunning}
                                 >
                                     {isRunning ? (
@@ -237,14 +285,14 @@ export default function ResultsPage() {
                                 </button>
                                 <button
                                     className="btn btn-secondary"
-                                    onClick={() => simulateMultipleMutation.mutate(5)}
+                                    onClick={() => handleRunRequest(5)}
                                     disabled={isRunning}
                                 >
                                     Run 5 Days
                                 </button>
                                 <button
                                     className="btn btn-secondary"
-                                    onClick={() => simulateMultipleMutation.mutate(10)}
+                                    onClick={() => handleRunRequest(10)}
                                     disabled={isRunning}
                                 >
                                     Run 10 Days
@@ -585,6 +633,20 @@ export default function ResultsPage() {
                                         avg_quality_score: data.totals?.avg_quality_score || 0.5,
                                         wasted_spend_percent: searchAnalysis?.wasted_spend?.percent || 0,
                                     })}
+                                    onInsightAction={(insightId, insightTitle, action) => {
+                                        // Log the coaching action
+                                        import('@/lib/decision-storage').then(({ logCoachingAction }) => {
+                                            logCoachingAction(runId, insightId, insightTitle, action);
+                                        });
+
+                                        // Show toast feedback
+                                        const actionMessages = {
+                                            apply: `Applied: ${insightTitle}`,
+                                            try_different: `Will try different approach for: ${insightTitle}`,
+                                            ignore: `Ignored: ${insightTitle}`,
+                                        };
+                                        addToast(actionMessages[action], action === 'apply' ? 'success' : 'info');
+                                    }}
                                 />
                             )}
 
@@ -614,7 +676,7 @@ export default function ResultsPage() {
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
                                     <button
                                         className="btn btn-primary w-full"
-                                        onClick={() => simulateMultipleMutation.mutate(30 - (data?.current_day || 0))}
+                                        onClick={() => handleRunRequest(Math.min(10, 30 - (data?.current_day || 0)))}
                                         disabled={isRunning || isComplete}
                                     >
                                         Complete Simulation
@@ -627,10 +689,23 @@ export default function ResultsPage() {
                                     </Link>
                                 </div>
                             </div>
+
+                            {/* Decision History Panel */}
+                            <DecisionHistoryPanel runId={runId} />
                         </div>
                     </div>
                 )}
             </div>
+
+            {/* Decision Checkpoint Modal */}
+            <DecisionCheckpointModal
+                isOpen={showDecisionModal}
+                onClose={() => setShowDecisionModal(false)}
+                onConfirm={handleDecisionConfirm}
+                userLevel={userLevel}
+                daysToRun={pendingDays}
+                currentDay={data?.current_day || 0}
+            />
 
             {/* Toast Notifications */}
             <div className="toast-container">

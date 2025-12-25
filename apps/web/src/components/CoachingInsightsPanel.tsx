@@ -5,8 +5,9 @@ import {
     Layers, Target, DollarSign, FileText, Wallet, BarChart3,
     AlertTriangle, AlertCircle, Info, ChevronUp, ChevronDown,
     ArrowUp, ArrowDown, ArrowRight, Check, Lightbulb, Sparkles,
-    GraduationCap, Plus, Minus
+    GraduationCap, Plus, Minus, X, RefreshCcw
 } from 'lucide-react';
+import { CoachingActionType } from '@/types/decision-types';
 
 // Insight data model
 interface CoachingInsight {
@@ -38,6 +39,7 @@ interface CoachingInsightsPanelProps {
     insights: CoachingInsight[];
     mode?: 'beginner' | 'advanced';
     onModeChange?: (mode: 'beginner' | 'advanced') => void;
+    onInsightAction?: (insightId: string, insightTitle: string, action: CoachingActionType) => void;
 }
 
 const categoryConfig: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
@@ -73,7 +75,12 @@ const severityConfig: Record<string, { icon: React.ReactNode; label: string; col
     },
 };
 
-function InsightCard({ insight, mode, isFirst }: { insight: CoachingInsight; mode: 'beginner' | 'advanced'; isFirst: boolean }) {
+function InsightCard({ insight, mode, isFirst, onAction }: {
+    insight: CoachingInsight;
+    mode: 'beginner' | 'advanced';
+    isFirst: boolean;
+    onAction?: (action: CoachingActionType) => void;
+}) {
     const [isExpanded, setIsExpanded] = useState(false);
     const category = categoryConfig[insight.category] || categoryConfig.market;
     const severity = severityConfig[insight.severity] || severityConfig.optional;
@@ -254,11 +261,45 @@ function InsightCard({ insight, mode, isFirst }: { insight: CoachingInsight; mod
                     </div>
                 </div>
             )}
+
+            {/* Action Buttons */}
+            {onAction && (
+                <div style={{
+                    marginTop: 'var(--space-4)',
+                    paddingTop: 'var(--space-3)',
+                    borderTop: '1px solid var(--border)',
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 'var(--space-2)',
+                }}>
+                    <button
+                        className="btn btn-sm btn-success"
+                        style={{ flex: 1, minWidth: '120px' }}
+                        onClick={() => onAction('apply')}
+                    >
+                        <Check size={12} /> Apply
+                    </button>
+                    <button
+                        className="btn btn-sm btn-secondary"
+                        style={{ flex: 1, minWidth: '120px' }}
+                        onClick={() => onAction('try_different')}
+                    >
+                        <RefreshCcw size={12} /> Try Different
+                    </button>
+                    <button
+                        className="btn btn-sm btn-ghost"
+                        style={{ flex: 1, minWidth: '80px' }}
+                        onClick={() => onAction('ignore')}
+                    >
+                        <X size={12} /> Ignore
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
 
-export default function CoachingInsightsPanel({ insights, mode = 'beginner', onModeChange }: CoachingInsightsPanelProps) {
+export default function CoachingInsightsPanel({ insights, mode = 'beginner', onModeChange, onInsightAction }: CoachingInsightsPanelProps) {
     const [localMode, setLocalMode] = useState<'beginner' | 'advanced'>(mode);
 
     const currentMode = onModeChange ? mode : localMode;
@@ -330,6 +371,7 @@ export default function CoachingInsightsPanel({ insights, mode = 'beginner', onM
                         insight={insight}
                         mode={currentMode}
                         isFirst={idx === 0}
+                        onAction={onInsightAction ? (action) => onInsightAction(insight.id, insight.title, action) : undefined}
                     />
                 ))}
             </div>
