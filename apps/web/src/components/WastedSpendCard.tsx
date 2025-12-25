@@ -81,7 +81,7 @@ export default function WastedSpendCard({
                     color: 'var(--text-primary)',
                     marginBottom: 'var(--space-1)',
                 }}>
-                    ${wastedAmount.toFixed(2)}
+                    ${(wastedAmount || 0).toFixed(2)}
                 </div>
 
                 {/* Progress Bar */}
@@ -107,7 +107,7 @@ export default function WastedSpendCard({
                         }} />
                     </div>
                     <span className="font-semibold" style={{ minWidth: '48px', color: config.borderColor }}>
-                        {wastedPercent.toFixed(1)}%
+                        {(wastedPercent || 0).toFixed(1)}%
                     </span>
                 </div>
 
@@ -131,7 +131,7 @@ export default function WastedSpendCard({
                 </span>
                 <span className="text-sm">
                     <strong style={{ color: trendUp ? 'var(--error)' : 'var(--success)' }}>
-                        {trendUp ? '+' : ''}{trendPercent.toFixed(1)}%
+                        {trendUp ? '+' : ''}{(trendPercent || 0).toFixed(1)}%
                     </strong>
                     {' '}
                     <span className="text-muted">

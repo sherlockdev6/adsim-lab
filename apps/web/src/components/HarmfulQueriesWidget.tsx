@@ -124,11 +124,11 @@ export default function HarmfulQueriesWidget({
                                 </div>
                                 <div style={{ textAlign: 'right' }}>
                                     <div className="font-semibold" style={{ color: 'var(--error)' }}>
-                                        ${q.spend.toFixed(2)}
+                                        ${(q.spend || 0).toFixed(2)}
                                     </div>
                                     {mode === 'advanced' && (
                                         <div className="text-xs text-muted">
-                                            Intent: {(q.intent_score * 100).toFixed(0)}%
+                                            Intent: {((q.intent_score || 0) * 100).toFixed(0)}%
                                         </div>
                                     )}
                                 </div>

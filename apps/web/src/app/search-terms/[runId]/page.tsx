@@ -174,7 +174,7 @@ export default function SearchTermsPage() {
                         <div className="metric-label">Conversions</div>
                     </div>
                     <div className="metric-card">
-                        <div className="metric-value">${totals.cost.toFixed(0)}</div>
+                        <div className="metric-value">${(totals.cost || 0).toFixed(0)}</div>
                         <div className="metric-label">Total Cost</div>
                     </div>
                 </div>
@@ -253,8 +253,8 @@ export default function SearchTermsPage() {
                                         </td>
                                         <td>
                                             <span className={`badge ${term.match_type === 'exact' ? 'badge-success' :
-                                                    term.match_type === 'phrase' ? 'badge-info' :
-                                                        'badge-neutral'
+                                                term.match_type === 'phrase' ? 'badge-info' :
+                                                    'badge-neutral'
                                                 }`}>
                                                 {term.match_type}
                                             </span>
@@ -263,11 +263,11 @@ export default function SearchTermsPage() {
                                         <td>{term.clicks.toLocaleString()}</td>
                                         <td>
                                             <span className={term.ctr >= 0.04 ? 'text-success' : ''}>
-                                                {(term.ctr * 100).toFixed(2)}%
+                                                {((term.ctr || 0) * 100).toFixed(2)}%
                                             </span>
                                         </td>
                                         <td>{term.conversions}</td>
-                                        <td>${term.cost.toFixed(2)}</td>
+                                        <td>${(term.cost || 0).toFixed(2)}</td>
                                         <td>
                                             <div className="btn-group">
                                                 <button

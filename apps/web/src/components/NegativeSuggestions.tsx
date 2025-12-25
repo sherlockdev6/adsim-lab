@@ -79,7 +79,7 @@ export default function NegativeSuggestions({
                         fontWeight: 700,
                         color: 'var(--success)',
                     }}>
-                        ${totalSavings.toFixed(2)}
+                        ${(totalSavings || 0).toFixed(2)}
                     </div>
                     <div className="text-xs text-muted">potential savings</div>
                 </div>
@@ -134,7 +134,7 @@ export default function NegativeSuggestions({
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
                                 <span className="font-semibold" style={{ color: 'var(--success)', fontSize: '0.875rem' }}>
-                                    +${suggestion.estimated_savings.toFixed(2)}
+                                    +${(suggestion.estimated_savings || 0).toFixed(2)}
                                 </span>
                                 <button
                                     className={`btn btn-sm ${isAdded ? 'btn-ghost' : 'btn-primary'}`}
@@ -160,7 +160,7 @@ export default function NegativeSuggestions({
                     marginBottom: 'var(--space-4)',
                 }}>
                     <p className="text-sm" style={{ marginBottom: 'var(--space-2)' }}>
-                        <strong>${remainingSavings.toFixed(2)}</strong> still recoverable
+                        <strong>${(remainingSavings || 0).toFixed(2)}</strong> still recoverable
                     </p>
                     <button
                         className="btn btn-primary"
