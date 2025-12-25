@@ -184,7 +184,18 @@ export async function GET(
         });
     }
 
-    // Campaign runs
+    // Account runs (direct - without campaign)
+    const accountRunsMatch = fullPath.match(/^\/accounts\/([^/]+)\/runs$/);
+    if (accountRunsMatch) {
+        const accountId = accountRunsMatch[1];
+        const accountRuns = storage.runs.filter(r => r.account_id === accountId);
+        return NextResponse.json({
+            runs: accountRuns,
+            count: accountRuns.length,
+        });
+    }
+
+    // Campaign runs (with campaign)
     const runsMatch = fullPath.match(/^\/accounts\/([^/]+)\/campaigns\/([^/]+)\/runs$/);
     if (runsMatch) {
         const campaignId = runsMatch[2];
