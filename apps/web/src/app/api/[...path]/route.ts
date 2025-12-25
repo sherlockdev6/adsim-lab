@@ -218,9 +218,19 @@ export async function GET(
     const resultsMatch = fullPath.match(/^\/runs\/([^/]+)\/results$/);
     if (resultsMatch) {
         const runId = resultsMatch[1];
-        const run = storage.runs.find(r => r.id === runId);
+        let run = storage.runs.find(r => r.id === runId);
         if (!run) {
-            return NextResponse.json({ detail: 'Run not found' }, { status: 404 });
+            // Auto-create run for serverless cold starts
+            run = {
+                id: runId,
+                account_id: 'restored',
+                status: 'pending',
+                current_day: 0,
+                duration_days: 30,
+                rng_seed: Math.floor(Math.random() * 100000),
+                created_at: new Date().toISOString(),
+            };
+            storage.runs.push(run);
         }
 
         const runResults = storage.dailyResults
@@ -596,9 +606,19 @@ export async function POST(
     const simulateMatch = fullPath.match(/^\/runs\/([^/]+)\/simulate-day$/);
     if (simulateMatch) {
         const runId = simulateMatch[1];
-        const run = storage.runs.find(r => r.id === runId);
+        let run = storage.runs.find(r => r.id === runId);
         if (!run) {
-            return NextResponse.json({ detail: 'Run not found' }, { status: 404 });
+            // Auto-create run for serverless cold starts
+            run = {
+                id: runId,
+                account_id: 'restored',
+                status: 'pending',
+                current_day: 0,
+                duration_days: 30,
+                rng_seed: Math.floor(Math.random() * 100000),
+                created_at: new Date().toISOString(),
+            };
+            storage.runs.push(run);
         }
 
         if (run.status === 'completed') {
