@@ -162,13 +162,21 @@ export async function GET(
         });
     }
 
-    // Single account
+    // Single account - auto-create if not found (serverless workaround)
     const accountMatch = fullPath.match(/^\/accounts\/([^/]+)$/);
     if (accountMatch) {
         const id = accountMatch[1];
-        const account = storage.accounts.find(a => a.id === id);
+        let account = storage.accounts.find(a => a.id === id);
         if (!account) {
-            return NextResponse.json({ detail: 'Account not found' }, { status: 404 });
+            // Auto-create account to handle serverless cold starts
+            account = {
+                id,
+                name: 'Restored Account',
+                daily_budget: 100,
+                currency: 'USD',
+                created_at: new Date().toISOString(),
+            };
+            storage.accounts.push(account);
         }
         return NextResponse.json(account);
     }
@@ -503,9 +511,17 @@ export async function POST(
     const campaignMatch = fullPath.match(/^\/accounts\/([^/]+)\/campaigns$/);
     if (campaignMatch) {
         const accountId = campaignMatch[1];
-        const account = storage.accounts.find(a => a.id === accountId);
+        let account = storage.accounts.find(a => a.id === accountId);
         if (!account) {
-            return NextResponse.json({ detail: 'Account not found' }, { status: 404 });
+            // Auto-create account for serverless cold starts
+            account = {
+                id: accountId,
+                name: 'Restored Account',
+                daily_budget: 100,
+                currency: 'USD',
+                created_at: new Date().toISOString(),
+            };
+            storage.accounts.push(account);
         }
 
         const campaign = {
@@ -548,9 +564,17 @@ export async function POST(
     const directRunMatch = fullPath.match(/^\/accounts\/([^/]+)\/runs$/);
     if (directRunMatch) {
         const accountId = directRunMatch[1];
-        const account = storage.accounts.find(a => a.id === accountId);
+        let account = storage.accounts.find(a => a.id === accountId);
         if (!account) {
-            return NextResponse.json({ detail: 'Account not found' }, { status: 404 });
+            // Auto-create account for serverless cold starts
+            account = {
+                id: accountId,
+                name: 'Restored Account',
+                daily_budget: 100,
+                currency: 'USD',
+                created_at: new Date().toISOString(),
+            };
+            storage.accounts.push(account);
         }
 
         const run = {
