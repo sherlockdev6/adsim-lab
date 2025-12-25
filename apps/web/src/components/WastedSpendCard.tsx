@@ -44,7 +44,7 @@ export default function WastedSpendCard({
         },
     };
 
-    const config = severityConfig[severity];
+    const config = severityConfig[severity] || severityConfig.info;
     const trendUp = trendPercent > 0;
 
     return (

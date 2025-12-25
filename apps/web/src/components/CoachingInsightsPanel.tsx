@@ -75,8 +75,8 @@ const severityConfig: Record<string, { icon: React.ReactNode; label: string; col
 
 function InsightCard({ insight, mode, isFirst }: { insight: CoachingInsight; mode: 'beginner' | 'advanced'; isFirst: boolean }) {
     const [isExpanded, setIsExpanded] = useState(false);
-    const category = categoryConfig[insight.category];
-    const severity = severityConfig[insight.severity];
+    const category = categoryConfig[insight.category] || categoryConfig.market;
+    const severity = severityConfig[insight.severity] || severityConfig.optional;
 
     return (
         <div

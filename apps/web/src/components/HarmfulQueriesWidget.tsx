@@ -70,7 +70,7 @@ export default function HarmfulQueriesWidget({
             {/* Queries List */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
                 {topQueries.map((q, idx) => {
-                    const config = classificationConfig[q.classification];
+                    const config = classificationConfig[q.classification] || classificationConfig.low_intent;
                     const isHovered = hoveredQuery === q.query;
                     const isAdded = addedNegatives.has(q.suggested_negative);
 
