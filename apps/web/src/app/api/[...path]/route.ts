@@ -239,25 +239,30 @@ export async function GET(
 
         let totals = null;
         if (runResults.length > 0) {
+            const totalImpressions = runResults.reduce((s, r) => s + r.impressions, 0);
+            const totalClicks = runResults.reduce((s, r) => s + r.clicks, 0);
+            const totalConversions = runResults.reduce((s, r) => s + r.conversions, 0);
+            const totalCost = runResults.reduce((s, r) => s + r.cost, 0);
+            const totalRevenue = runResults.reduce((s, r) => s + r.revenue, 0);
+
             totals = {
                 day_number: 0,
-                impressions: runResults.reduce((s, r) => s + r.impressions, 0),
-                clicks: runResults.reduce((s, r) => s + r.clicks, 0),
-                conversions: runResults.reduce((s, r) => s + r.conversions, 0),
-                cost: runResults.reduce((s, r) => s + r.cost, 0),
-                revenue: runResults.reduce((s, r) => s + r.revenue, 0),
+                impressions: totalImpressions,
+                clicks: totalClicks,
+                conversions: totalConversions,
+                cost: totalCost,
+                revenue: totalRevenue,
                 avg_position: runResults.reduce((s, r) => s + r.avg_position, 0) / runResults.length,
                 avg_quality_score: runResults.reduce((s, r) => s + r.avg_quality_score, 0) / runResults.length,
                 impression_share: runResults.reduce((s, r) => s + r.impression_share, 0) / runResults.length,
                 lost_is_budget: runResults.reduce((s, r) => s + r.lost_is_budget, 0) / runResults.length,
                 lost_is_rank: runResults.reduce((s, r) => s + r.lost_is_rank, 0) / runResults.length,
-                ctr: 0, cvr: 0, cpc: 0, cpa: 0, roas: 0
+                ctr: totalImpressions > 0 ? totalClicks / totalImpressions : 0,
+                cvr: totalClicks > 0 ? totalConversions / totalClicks : 0,
+                cpc: totalClicks > 0 ? totalCost / totalClicks : 0,
+                cpa: totalConversions > 0 ? totalCost / totalConversions : 0,
+                roas: totalCost > 0 ? totalRevenue / totalCost : 0,
             };
-            totals.ctr = totals.clicks / totals.impressions;
-            totals.cvr = totals.conversions / totals.clicks;
-            totals.cpc = totals.cost / totals.clicks;
-            totals.cpa = totals.cost / totals.conversions;
-            totals.roas = totals.revenue / totals.cost;
         }
 
         return NextResponse.json({
@@ -267,11 +272,11 @@ export async function GET(
             duration_days: run.duration_days,
             daily_results: runResults.map(r => ({
                 ...r,
-                ctr: r.clicks / r.impressions,
-                cvr: r.conversions / r.clicks,
-                cpc: r.cost / r.clicks,
-                cpa: r.cost / r.conversions,
-                roas: r.revenue / r.cost,
+                ctr: r.impressions > 0 ? r.clicks / r.impressions : 0,
+                cvr: r.clicks > 0 ? r.conversions / r.clicks : 0,
+                cpc: r.clicks > 0 ? r.cost / r.clicks : 0,
+                cpa: r.conversions > 0 ? r.cost / r.conversions : 0,
+                roas: r.cost > 0 ? r.revenue / r.cost : 0,
             })),
             totals,
         });
