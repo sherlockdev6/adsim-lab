@@ -284,26 +284,26 @@ export default function ResultsPage() {
                                     <div className="metric-card">
                                         <div className="metric-value">{Math.round(data.totals.clicks).toLocaleString()}</div>
                                         <div className="metric-label">Clicks</div>
-                                        <div className={`metric-change ${data.totals.ctr >= 0.03 ? 'positive' : ''}`}>
-                                            {(data.totals.ctr * 100).toFixed(2)}% CTR
+                                        <div className={`metric-change ${(data.totals.ctr || 0) >= 0.03 ? 'positive' : ''}`}>
+                                            {((data.totals.ctr || 0) * 100).toFixed(2)}% CTR
                                         </div>
                                     </div>
                                     <div className="metric-card">
                                         <div className="metric-value">{Math.round(data.totals.conversions).toLocaleString()}</div>
                                         <div className="metric-label">Conversions</div>
-                                        <div className={`metric-change ${data.totals.cvr >= 0.05 ? 'positive' : ''}`}>
-                                            {(data.totals.cvr * 100).toFixed(2)}% CVR
+                                        <div className={`metric-change ${(data.totals.cvr || 0) >= 0.05 ? 'positive' : ''}`}>
+                                            {((data.totals.cvr || 0) * 100).toFixed(2)}% CVR
                                         </div>
                                     </div>
                                     <div className="metric-card">
-                                        <div className="metric-value">${data.totals.cost.toFixed(0)}</div>
+                                        <div className="metric-value">${(data.totals.cost || 0).toFixed(0)}</div>
                                         <div className="metric-label">Cost</div>
                                         <div className="metric-change">
                                             ${data.totals.cpc?.toFixed(2) || '0'} CPC
                                         </div>
                                     </div>
                                     <div className="metric-card">
-                                        <div className="metric-value">${data.totals.revenue.toFixed(0)}</div>
+                                        <div className="metric-value">${(data.totals.revenue || 0).toFixed(0)}</div>
                                         <div className="metric-label">Revenue</div>
                                         <div className={`metric-change ${(data.totals.roas || 0) >= 1 ? 'positive' : 'negative'}`}>
                                             {(data.totals.roas || 0).toFixed(2)}x ROAS
@@ -403,7 +403,7 @@ export default function ResultsPage() {
                                                     labelStyle={{ color: '#f8fafc' }}
                                                     labelFormatter={(v) => `Day ${v}`}
                                                     formatter={(value: any, name: string) => {
-                                                        if (name === 'Cost ($)') return [`$${value.toFixed(2)}`, name];
+                                                        if (name === 'Cost ($)') return [`$${(value || 0).toFixed(2)}`, name];
                                                         return [value, name];
                                                     }}
                                                 />
@@ -516,7 +516,7 @@ export default function ResultsPage() {
                                                             </span>
                                                         </td>
                                                         <td>{Math.round(r.conversions)}</td>
-                                                        <td>${r.cost.toFixed(0)}</td>
+                                                        <td>${(r.cost || 0).toFixed(0)}</td>
                                                         <td>${(r.cpc || 0).toFixed(2)}</td>
                                                         <td>
                                                             <span className={`badge ${(r.roas || 0) >= 1 ? 'badge-success' : 'badge-error'}`}>
