@@ -341,7 +341,7 @@ export default function ResultsPage() {
                                         {data.status}
                                     </span>
                                     <div className="flex items-center gap-2">
-                                        <div className="progress-bar" style={{ width: '80px' }}>
+                                        <div className="progress-bar-premium" style={{ width: '100px' }}>
                                             <div
                                                 className="progress-fill"
                                                 style={{ width: `${(data.current_day / data.duration_days) * 100}%` }}
@@ -412,33 +412,33 @@ export default function ResultsPage() {
                         <div className="dashboard-main">
                             {/* Metrics Cards */}
                             {data.totals ? (
-                                <div className="grid grid-cols-5">
-                                    <div className="metric-card">
+                                <div className="grid grid-cols-5 animate-stagger">
+                                    <div className="metric-card metric-card-premium">
                                         <div className="metric-value">{Math.round(data.totals.impressions).toLocaleString()}</div>
                                         <div className="metric-label">Impressions</div>
                                     </div>
-                                    <div className="metric-card">
+                                    <div className="metric-card metric-card-premium">
                                         <div className="metric-value">{Math.round(data.totals.clicks).toLocaleString()}</div>
                                         <div className="metric-label">Clicks</div>
-                                        <div className={`metric-change ${(data.totals.ctr || 0) >= 0.03 ? 'positive' : ''}`}>
-                                            {((data.totals.ctr || 0) * 100).toFixed(2)}% CTR
+                                        <div className={`metric-change ${(data.totals.ctr || 0) >= 3 ? 'positive' : ''}`}>
+                                            {(data.totals.ctr || 0).toFixed(2)}% CTR
                                         </div>
                                     </div>
-                                    <div className="metric-card">
+                                    <div className="metric-card metric-card-premium">
                                         <div className="metric-value">{Math.round(data.totals.conversions).toLocaleString()}</div>
                                         <div className="metric-label">Conversions</div>
-                                        <div className={`metric-change ${(data.totals.cvr || 0) >= 0.05 ? 'positive' : ''}`}>
-                                            {((data.totals.cvr || 0) * 100).toFixed(2)}% CVR
+                                        <div className={`metric-change ${(data.totals.cvr || 0) >= 5 ? 'positive' : ''}`}>
+                                            {(data.totals.cvr || 0).toFixed(2)}% CVR
                                         </div>
                                     </div>
-                                    <div className="metric-card">
+                                    <div className="metric-card metric-card-premium">
                                         <div className="metric-value">${(data.totals.cost || 0).toFixed(0)}</div>
                                         <div className="metric-label">Cost</div>
                                         <div className="metric-change">
                                             ${data.totals.cpc?.toFixed(2) || '0'} CPC
                                         </div>
                                     </div>
-                                    <div className="metric-card">
+                                    <div className="metric-card metric-card-premium">
                                         <div className="metric-value">${(data.totals.revenue || 0).toFixed(0)}</div>
                                         <div className="metric-label">Revenue</div>
                                         <div className={`metric-change ${(data.totals.roas || 0) >= 1 ? 'positive' : 'negative'}`}>
