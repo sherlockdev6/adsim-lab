@@ -15,9 +15,10 @@ import NegativeSuggestions from '@/components/NegativeSuggestions';
 import DecisionCheckpointModal from '@/components/DecisionCheckpointModal';
 import DecisionHistoryPanel from '@/components/DecisionHistoryPanel';
 import OwnershipSummary from '@/components/OwnershipSummary';
+import LearningProgress, { useLearningProgress, GuidedTip, CounterfactualHint } from '@/components/EducationalComponents';
 import { DecisionSet, UserLevel, defaultDecisionSet, RunDecision } from '@/types/decision-types';
 import { saveRunDecision, getLatestDecision, getRunDecisions } from '@/lib/decision-storage';
-import { Search, Lightbulb, MapPin, Check, X, Info, BarChart3, Settings } from 'lucide-react';
+import { Search, Lightbulb, MapPin, Check, X, Info, BarChart3, Settings, Award } from 'lucide-react';
 
 interface DailyResult {
     day_number: number;
@@ -266,6 +267,24 @@ export default function ResultsPage() {
         const currentDay = (data?.current_day || 0) + 1;
         const savedDecision = saveRunDecision(runId, currentDay, decisions, userLevel);
         setLatestDecision(savedDecision);
+
+        // Auto-unlock learning concepts based on decisions made
+        const STORAGE_KEY = 'adsim_learning_progress';
+        const getProgress = () => {
+            try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; }
+        };
+        const markLearned = (conceptId: string) => {
+            const progress = getProgress();
+            if (!progress[conceptId]?.learned) {
+                progress[conceptId] = { learned: true, learnedAt: new Date().toISOString() };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+                setTimeout(() => addToast(`🏆 Concept unlocked: ${conceptId.replace('_', ' ')}!`, 'success'), 1500);
+            }
+        };
+
+        if (decisions.addNegativeKeywords) markLearned('negative_keywords');
+        if (decisions.tightenMatchTypes) markLearned('match_types');
+        if (decisions.budgetAdjustment !== 'unchanged') markLearned('budget_optimization');
 
         // Start simulation
         if (pendingDays === 1) {
@@ -758,6 +777,9 @@ export default function ResultsPage() {
                                     onAddAll={() => addToast('All negatives added!', 'success')}
                                 />
                             )}
+
+                            {/* Learning Progress Tracker */}
+                            <LearningProgress runId={runId} />
 
                             {/* Quick Actions */}
                             <div className="card">
