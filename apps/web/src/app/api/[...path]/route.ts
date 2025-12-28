@@ -843,6 +843,68 @@ export async function POST(
             return x - Math.floor(x);
         };
 
+        // ========== WEEKLY PATTERNS ==========
+        // Days 1-5 = weekday, 6-7 = weekend (simulated)
+        const dayOfWeek = ((run.current_day - 1) % 7) + 1;
+        const isWeekend = dayOfWeek >= 6;
+
+        // Weekend effects: lower CPC (-15%), higher CVR (+10%), lower competition
+        const weekendCpcMod = isWeekend ? 0.85 : 1.0;
+        const weekendCvrMod = isWeekend ? 1.10 : 1.0;
+        const weekendVolumeMod = isWeekend ? 0.80 : 1.0; // Less business traffic
+
+        // ========== COMPETITOR BEHAVIOR ==========
+        // Define competitor types based on seed
+        const competitorType = ['aggressive', 'defensive', 'reactive', 'absent'][Math.floor(rand(200) * 4)];
+        let competitorPressure = 1.0;
+        let competitorCpcInflation = 1.0;
+
+        switch (competitorType) {
+            case 'aggressive':
+                // Aggressive competitor drives up CPC
+                competitorPressure = 1.2 + rand(201) * 0.3; // 1.2-1.5x pressure
+                competitorCpcInflation = 1.15 + rand(202) * 0.2;
+                break;
+            case 'defensive':
+                // Defensive competitor steady, moderate pressure
+                competitorPressure = 0.9 + rand(203) * 0.2;
+                competitorCpcInflation = 1.0;
+                break;
+            case 'reactive':
+                // Reactive competitor mirrors your moves (gets stronger over time)
+                competitorPressure = 1.0 + (run.current_day / 30) * 0.5;
+                competitorCpcInflation = 1.0 + (run.current_day / 30) * 0.2;
+                break;
+            case 'absent':
+                // Low competition
+                competitorPressure = 0.7;
+                competitorCpcInflation = 0.85;
+                break;
+        }
+
+        // ========== MARKET EVENTS ==========
+        // Random events that affect performance
+        type MarketEvent = { type: string; name: string; impressionMod: number; cvrMod: number; cpcMod: number };
+        let marketEvent: MarketEvent | null = null;
+        const eventRoll = rand(300);
+
+        if (eventRoll < 0.1) {
+            // 10% chance of a significant event
+            const events: MarketEvent[] = [
+                { type: 'new_competitor', name: 'New Competitor Entered Market', impressionMod: 0.85, cvrMod: 0.95, cpcMod: 1.25 },
+                { type: 'holiday_surge', name: 'Holiday Shopping Surge', impressionMod: 1.4, cvrMod: 1.15, cpcMod: 1.3 },
+                { type: 'platform_update', name: 'Platform Algorithm Update', impressionMod: 0.9, cvrMod: rand(301) > 0.5 ? 1.15 : 0.85, cpcMod: 1.0 },
+                { type: 'viral_trend', name: 'Industry Trend Going Viral', impressionMod: 1.6, cvrMod: 0.85, cpcMod: 1.2 },
+                { type: 'competitor_exit', name: 'Major Competitor Paused Ads', impressionMod: 1.3, cvrMod: 1.05, cpcMod: 0.75 },
+            ];
+            marketEvent = events[Math.floor(rand(302) * events.length)];
+        }
+
+        // ========== SEASONAL MODIFIER ==========
+        // Simulate seasonal patterns (based on day number as proxy for time)
+        const seasonalPhase = (run.current_day / 30) * Math.PI * 2;
+        const seasonalMod = 1 + Math.sin(seasonalPhase) * 0.15; // ±15% seasonal swing
+
         // Market volatility - varies significantly day to day
         const volatilityFactor = 0.3 + rand(100) * 0.5; // 30%-80% variance
         const marketTrend = rand(101) > 0.5 ? 1 : -1; // Random up/down trend
@@ -866,26 +928,31 @@ export async function POST(
         const baseCvr = 0.02 + rand(3) * 0.04;
         const baseCpc = 2 + rand(4) * 5;
 
-        // Apply volatility and trends
+        // Apply all modifiers
         const impressionSwing = 1 + (marketTrend * volatilityFactor * 0.3);
         const ctrSwing = 1 + (rand(5) - 0.5) * volatilityFactor * 0.4;
         const cvrSwing = 1 + (rand(6) - 0.5) * volatilityFactor * 0.5;
         const cpcSwing = 1 + (rand(7) - 0.5) * volatilityFactor * 0.3;
 
         // Apply decision impacts
-        // Negatives: reduce volume but increase quality
-        const volumeReduction = matchTypeImpact * 0.25; // Tighter match = less volume
-        const qualityBoost = negativeImpact * 0.5 + matchTypeImpact * 0.3; // Better targeting
+        const volumeReduction = matchTypeImpact * 0.25;
+        const qualityBoost = negativeImpact * 0.5 + matchTypeImpact * 0.3;
 
-        // Calculate final metrics
+        // Apply event modifiers (if any)
+        const eventImpMod = marketEvent?.impressionMod || 1.0;
+        const eventCvrMod = marketEvent?.cvrMod || 1.0;
+        const eventCpcMod = marketEvent?.cpcMod || 1.0;
+
+        // Calculate final metrics with all factors
         const impressions = Math.floor(
-            baseImpressions * impressionSwing * budgetModifier * (1 - volumeReduction)
+            baseImpressions * impressionSwing * budgetModifier * (1 - volumeReduction) *
+            weekendVolumeMod * seasonalMod * competitorPressure * eventImpMod
         );
         const ctr = Math.min(0.15, Math.max(0.01, baseCtr * ctrSwing * (1 + qualityBoost * 0.3)));
         const clicks = Math.floor(impressions * ctr);
-        const cvr = Math.min(0.12, Math.max(0.005, baseCvr * cvrSwing * (1 + qualityBoost * 0.5)));
+        const cvr = Math.min(0.12, Math.max(0.005, baseCvr * cvrSwing * (1 + qualityBoost * 0.5) * weekendCvrMod * eventCvrMod));
         const conversions = Math.max(0, Math.floor(clicks * cvr));
-        const cpc = Math.max(0.5, baseCpc * cpcSwing * (1 - qualityBoost * 0.15));
+        const cpc = Math.max(0.5, baseCpc * cpcSwing * (1 - qualityBoost * 0.15) * weekendCpcMod * competitorCpcInflation * eventCpcMod);
         const cost = Math.round(clicks * cpc * 100) / 100;
         const aov = 80 + rand(8) * 120; // Average order value
         const revenue = Math.round(conversions * aov * 100) / 100;
@@ -927,6 +994,18 @@ export async function POST(
                 negatives_added: negativeImpact > 0,
                 match_types_tightened: matchTypeImpact > 0,
                 budget_modifier: budgetModifier,
+            },
+            // Market context for this day
+            market_context: {
+                day_of_week: dayOfWeek,
+                is_weekend: isWeekend,
+                competitor_type: competitorType,
+                competitor_pressure: Math.round(competitorPressure * 100) / 100,
+                market_event: marketEvent ? {
+                    type: marketEvent.type,
+                    name: marketEvent.name,
+                } : null,
+                seasonal_factor: Math.round(seasonalMod * 100) / 100,
             },
             created_at: new Date().toISOString(),
         };
