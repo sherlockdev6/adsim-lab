@@ -47,21 +47,90 @@ interface RunResults {
     totals: DailyResult | null;
 }
 
-// Toast component
+// Toast component with improved styling
 function Toast({ message, type, onClose }: { message: string; type: 'success' | 'error' | 'info'; onClose: () => void }) {
+    const [isExiting, setIsExiting] = useState(false);
+
     useEffect(() => {
-        const timer = setTimeout(onClose, 4000);
-        return () => clearTimeout(timer);
+        const exitTimer = setTimeout(() => setIsExiting(true), 3500);
+        const closeTimer = setTimeout(onClose, 4000);
+        return () => {
+            clearTimeout(exitTimer);
+            clearTimeout(closeTimer);
+        };
     }, [onClose]);
 
     const IconComponent = type === 'success' ? Check : type === 'error' ? X : Info;
+    const bgColor = type === 'success' ? 'rgba(34, 197, 94, 0.95)'
+        : type === 'error' ? 'rgba(239, 68, 68, 0.95)'
+            : 'rgba(59, 130, 246, 0.95)';
+    const accentColor = type === 'success' ? 'var(--success)'
+        : type === 'error' ? 'var(--error)'
+            : 'var(--primary)';
 
     return (
-        <div className={`toast toast-${type}`}>
-            <span style={{ display: 'flex', alignItems: 'center' }}>
-                <IconComponent size={20} />
+        <div
+            className={`toast toast-${type}`}
+            style={{
+                background: bgColor,
+                backdropFilter: 'blur(8px)',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                borderRadius: 'var(--radius-lg)',
+                padding: 'var(--space-3) var(--space-4)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--space-3)',
+                minWidth: '280px',
+                position: 'relative',
+                overflow: 'hidden',
+                animation: isExiting ? 'slideOut 0.3s ease forwards' : 'slideIn 0.3s ease',
+            }}
+        >
+            {/* Icon */}
+            <span style={{
+                display: 'flex',
+                alignItems: 'center',
+                padding: 'var(--space-2)',
+                background: 'rgba(255,255,255,0.2)',
+                borderRadius: 'var(--radius-md)',
+            }}>
+                <IconComponent size={18} />
             </span>
-            <span>{message}</span>
+
+            {/* Message */}
+            <span style={{ flex: 1, fontWeight: 500, fontSize: '0.875rem' }}>{message}</span>
+
+            {/* Close Button */}
+            <button
+                onClick={onClose}
+                style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'inherit',
+                    cursor: 'pointer',
+                    padding: 'var(--space-1)',
+                    display: 'flex',
+                    opacity: 0.7,
+                }}
+            >
+                <X size={14} />
+            </button>
+
+            {/* Progress bar at bottom */}
+            <div style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: '3px',
+                background: 'rgba(0,0,0,0.2)',
+            }}>
+                <div style={{
+                    height: '100%',
+                    background: 'rgba(255,255,255,0.5)',
+                    animation: 'toastProgress 4s linear forwards',
+                }} />
+            </div>
         </div>
     );
 }
@@ -711,7 +780,10 @@ export default function ResultsPage() {
                             </div>
 
                             {/* Decision History Panel */}
-                            <DecisionHistoryPanel runId={runId} />
+                            <DecisionHistoryPanel
+                                runId={runId}
+                                dailyResults={data?.daily_results}
+                            />
                         </div>
                     </div>
                 )}
