@@ -12,13 +12,13 @@ import CausalInsightsPanel from '@/components/CausalInsightsPanel';
 import WastedSpendCard from '@/components/WastedSpendCard';
 import HarmfulQueriesWidget from '@/components/HarmfulQueriesWidget';
 import NegativeSuggestions from '@/components/NegativeSuggestions';
-import DecisionCheckpointModal from '@/components/DecisionCheckpointModal';
+import DecisionPanel from '@/components/DecisionPanel';
 import DecisionHistoryPanel from '@/components/DecisionHistoryPanel';
 import OwnershipSummary from '@/components/OwnershipSummary';
-import LearningProgress, { useLearningProgress, GuidedTip, CounterfactualHint } from '@/components/EducationalComponents';
-import { DecisionSet, UserLevel, defaultDecisionSet, RunDecision } from '@/types/decision-types';
-import { saveRunDecision, getLatestDecision, getRunDecisions } from '@/lib/decision-storage';
-import { Search, Lightbulb, MapPin, Check, X, Info, BarChart3, Settings, Award } from 'lucide-react';
+import LearningProgress from '@/components/EducationalComponents';
+import { DecisionSet, UserLevel, RunDecision } from '@/types/decision-types';
+import { saveRunDecision, getLatestDecision } from '@/lib/decision-storage';
+import { Search, Lightbulb, Check, X, Info, BarChart3, MapPin } from 'lucide-react';
 
 interface DailyResult {
     day_number: number;
@@ -168,9 +168,7 @@ export default function ResultsPage() {
     const [toasts, setToasts] = useState<Array<{ id: number; message: string; type: 'success' | 'error' | 'info' }>>([]);
 
     // Decision system state
-    const [showDecisionModal, setShowDecisionModal] = useState(false);
-    const [pendingDays, setPendingDays] = useState<number>(1);
-    const [userLevel, setUserLevel] = useState<UserLevel>('beginner');
+    const [userLevel] = useState<UserLevel>('beginner');
     const [latestDecision, setLatestDecision] = useState<RunDecision | null>(null);
     const [showOwnershipSummary, setShowOwnershipSummary] = useState(false);
 
@@ -253,16 +251,8 @@ export default function ResultsPage() {
     const isRunning = simulateDayMutation.isPending || simulateMultipleMutation.isPending;
     const isComplete = data?.status === 'completed';
 
-    // Handle decision-gated simulation start
-    const handleRunRequest = (days: number) => {
-        setPendingDays(days);
-        setShowDecisionModal(true);
-    };
-
-    // Handle decision confirmation
-    const handleDecisionConfirm = (decisions: DecisionSet) => {
-        setShowDecisionModal(false);
-
+    // Handle inline decision run (from DecisionPanel)
+    const handleDecisionRun = (decisions: DecisionSet) => {
         // Save the decision
         const currentDay = (data?.current_day || 0) + 1;
         const savedDecision = saveRunDecision(runId, currentDay, decisions, userLevel);
@@ -286,17 +276,11 @@ export default function ResultsPage() {
         if (decisions.tightenMatchTypes) markLearned('match_types');
         if (decisions.budgetAdjustment !== 'unchanged') markLearned('budget_optimization');
 
-        // Start simulation
-        if (pendingDays === 1) {
-            simulateDayMutation.mutate();
-        } else {
-            simulateMultipleMutation.mutate(pendingDays);
-        }
+        // Run single day
+        simulateDayMutation.mutate();
 
         // Show ownership summary after completion
         setShowOwnershipSummary(true);
-
-        addToast('Decision recorded - simulation starting!', 'info');
     };
 
     // Handle chart click
@@ -355,37 +339,17 @@ export default function ResultsPage() {
                             </>
                         )}
 
-                        {!isComplete && (
-                            <div className="btn-group">
-                                <button
-                                    className="btn btn-primary"
-                                    onClick={() => handleRunRequest(1)}
-                                    disabled={isRunning}
-                                >
-                                    {isRunning ? (
-                                        <>
-                                            <span className="spinner spinner-sm" />
-                                            Running...
-                                        </>
-                                    ) : (
-                                        '▶ Run 1 Day'
-                                    )}
-                                </button>
-                                <button
-                                    className="btn btn-secondary"
-                                    onClick={() => handleRunRequest(5)}
-                                    disabled={isRunning}
-                                >
-                                    Run 5 Days
-                                </button>
-                                <button
-                                    className="btn btn-secondary"
-                                    onClick={() => handleRunRequest(10)}
-                                    disabled={isRunning}
-                                >
-                                    Run 10 Days
-                                </button>
+                        {!isComplete && isRunning && (
+                            <div className="flex items-center gap-2">
+                                <span className="spinner spinner-sm" />
+                                <span className="text-sm text-muted">Simulating...</span>
                             </div>
+                        )}
+
+                        {isComplete && (
+                            <span className="badge badge-success">
+                                ✓ Complete
+                            </span>
                         )}
                     </div>
                 </div>
@@ -782,23 +746,24 @@ export default function ResultsPage() {
                             <LearningProgress runId={runId} />
 
                             {/* Quick Actions */}
+                            {/* Decision Panel - Inline Run Controls */}
+                            {!isComplete && (
+                                <DecisionPanel
+                                    onRun={handleDecisionRun}
+                                    isRunning={isRunning}
+                                    currentDay={data?.current_day || 0}
+                                    userLevel={userLevel}
+                                />
+                            )}
+
+                            {/* Back to Workspace */}
                             <div className="card">
-                                <h3 className="card-title" style={{ marginBottom: 'var(--space-4)' }}>Quick Actions</h3>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-                                    <button
-                                        className="btn btn-primary w-full"
-                                        onClick={() => handleRunRequest(Math.min(10, 30 - (data?.current_day || 0)))}
-                                        disabled={isRunning || isComplete}
-                                    >
-                                        Complete Simulation
-                                    </button>
-                                    <Link
-                                        href="/workspace"
-                                        className="btn btn-secondary w-full"
-                                    >
-                                        Back to Workspace
-                                    </Link>
-                                </div>
+                                <Link
+                                    href="/workspace"
+                                    className="btn btn-secondary w-full"
+                                >
+                                    ← Back to Workspace
+                                </Link>
                             </div>
 
                             {/* Decision History Panel */}
@@ -809,28 +774,18 @@ export default function ResultsPage() {
                         </div>
                     </div>
                 )}
-            </div>
 
-            {/* Decision Checkpoint Modal */}
-            <DecisionCheckpointModal
-                isOpen={showDecisionModal}
-                onClose={() => setShowDecisionModal(false)}
-                onConfirm={handleDecisionConfirm}
-                userLevel={userLevel}
-                daysToRun={pendingDays}
-                currentDay={data?.current_day || 0}
-            />
-
-            {/* Toast Notifications */}
-            <div className="toast-container">
-                {toasts.map((toast) => (
-                    <Toast
-                        key={toast.id}
-                        message={toast.message}
-                        type={toast.type}
-                        onClose={() => removeToast(toast.id)}
-                    />
-                ))}
+                {/* Toast Notifications */}
+                <div className="toast-container">
+                    {toasts.map((toast) => (
+                        <Toast
+                            key={toast.id}
+                            message={toast.message}
+                            type={toast.type}
+                            onClose={() => removeToast(toast.id)}
+                        />
+                    ))}
+                </div>
             </div>
         </main>
     );
