@@ -301,158 +301,291 @@ export async function GET(
             return NextResponse.json({ detail: 'Day not found' }, { status: 404 });
         }
 
-        // Generate causal analysis data
-        const rng = (run.rng_seed || 12345) + dayNumber;
-        const rand = (n: number) => ((rng * n * 9301 + 49297) % 233280) / 233280;
+        // ========== DATA-DRIVEN CAUSAL ANALYSIS ==========
 
-        // Intent Mix Shift
-        const baseHighIntent = 45;
-        const baseLowIntent = 20;
-        let intentShiftFactor = 0;
-        if (dayNumber <= 3) {
-            intentShiftFactor = dayNumber * 8;
-        } else {
-            intentShiftFactor = Math.max(0, 24 - (dayNumber - 3) * 6);
+        // Calculate actual metric changes
+        const safeDiv = (a: number, b: number) => b === 0 ? 0 : a / b;
+        const currCtr = safeDiv(current.clicks, current.impressions);
+        const currCvr = safeDiv(current.conversions, current.clicks);
+        const currCpc = safeDiv(current.cost, current.clicks);
+        const currCpa = safeDiv(current.cost, Math.max(1, current.conversions));
+        const currRoas = safeDiv(current.revenue, current.cost);
+
+        const prevCtr = previous ? safeDiv(previous.clicks, previous.impressions) : currCtr;
+        const prevCvr = previous ? safeDiv(previous.conversions, previous.clicks) : currCvr;
+        const prevCpc = previous ? safeDiv(previous.cost, previous.clicks) : currCpc;
+        const prevCpa = previous ? safeDiv(previous.cost, Math.max(1, previous.conversions)) : currCpa;
+        const prevRoas = previous ? safeDiv(previous.revenue, previous.cost) : currRoas;
+
+        // Percentage changes
+        const calcChange = (curr: number, prev: number) => prev === 0 ? 0 : ((curr - prev) / prev) * 100;
+        const ctrChange = calcChange(currCtr, prevCtr);
+        const cvrChange = calcChange(currCvr, prevCvr);
+        const cpcChange = calcChange(currCpc, prevCpc);
+        const cpaChange = calcChange(currCpa, prevCpa);
+        const roasChange = calcChange(currRoas, prevRoas);
+        const impressionChange = calcChange(current.impressions, previous?.impressions || current.impressions);
+        const conversionChange = calcChange(current.conversions, previous?.conversions || current.conversions);
+
+        // Check what decisions were active
+        const decisionsActive = current.decisions_active || {};
+        const negativesAdded = decisionsActive.negatives_added || false;
+        const matchTypesTightened = decisionsActive.match_types_tightened || false;
+        const budgetChanged = decisionsActive.budget_modifier !== 1;
+
+        // ========== DYNAMIC ISSUE DETECTION ==========
+        const detectedIssues: any[] = [];
+        const positiveOutcomes: any[] = [];
+
+        // Issue: High CPA (cost per acquisition too high)
+        if (currCpa > 50 || cpaChange > 20) {
+            detectedIssues.push({
+                id: 'high_cpa',
+                severity: currCpa > 80 ? 'critical' : 'important',
+                title: 'Cost Per Acquisition Too High',
+                summary_beginner: `You're paying $${currCpa.toFixed(0)} per conversion, which is ${cpaChange > 0 ? 'up' : 'down'} ${Math.abs(cpaChange).toFixed(0)}% from yesterday.`,
+                summary_advanced: `CPA ${currCpa.toFixed(2)} (${cpaChange > 0 ? '+' : ''}${cpaChange.toFixed(1)}%). ROAS at ${currRoas.toFixed(2)}x may not be sustainable.`,
+                root_causes: [
+                    { cause: 'Low conversion rate', contribution: 40 + Math.round(Math.random() * 20) },
+                    { cause: 'High cost per click', contribution: 30 + Math.round(Math.random() * 15) },
+                    { cause: 'Poor targeting quality', contribution: 15 + Math.round(Math.random() * 10) },
+                ],
+                suggested_action: 'Add negative keywords or tighten match types to improve targeting.',
+            });
         }
 
-        const highIntentPercent = Math.max(15, baseHighIntent - intentShiftFactor + Math.round(rand(100) * 5));
-        const lowIntentPercent = Math.min(50, baseLowIntent + intentShiftFactor + Math.round(rand(101) * 5));
-        const medIntentPercent = 100 - highIntentPercent - lowIntentPercent;
+        // Issue: CTR dropped significantly
+        if (ctrChange < -15) {
+            detectedIssues.push({
+                id: 'ctr_drop',
+                severity: ctrChange < -25 ? 'critical' : 'important',
+                title: 'Click-Through Rate Dropped',
+                summary_beginner: `Fewer people are clicking your ads (${ctrChange.toFixed(0)}% drop). This could mean your ads are less relevant or competition increased.`,
+                summary_advanced: `CTR declined ${ctrChange.toFixed(1)}% (${(prevCtr * 100).toFixed(2)}% → ${(currCtr * 100).toFixed(2)}%). Check ad copy relevance and auction dynamics.`,
+                root_causes: [
+                    { cause: 'Ad fatigue or stale copy', contribution: 35 },
+                    { cause: 'Increased competition', contribution: 30 },
+                    { cause: 'Audience saturation', contribution: 20 },
+                    { cause: 'Seasonal shift in intent', contribution: 15 },
+                ],
+                suggested_action: 'Refresh ad copy or review search term relevance.',
+            });
+        }
 
-        const prevHighIntent = previous ? baseHighIntent - (dayNumber - 1) * (dayNumber <= 3 ? 8 : -4) : highIntentPercent;
-        const prevLowIntent = previous ? baseLowIntent + (dayNumber - 1) * (dayNumber <= 3 ? 8 : -4) : lowIntentPercent;
+        // Issue: CVR dropped significantly  
+        if (cvrChange < -20) {
+            detectedIssues.push({
+                id: 'cvr_drop',
+                severity: cvrChange < -35 ? 'critical' : 'important',
+                title: 'Conversion Rate Dropped',
+                summary_beginner: `Clicks aren't turning into conversions (${cvrChange.toFixed(0)}% drop). Traffic quality may be declining.`,
+                summary_advanced: `CVR dropped ${cvrChange.toFixed(1)}% (${(prevCvr * 100).toFixed(2)}% → ${(currCvr * 100).toFixed(2)}%). Investigate traffic source quality.`,
+                root_causes: [
+                    { cause: 'Lower intent traffic', contribution: 45 },
+                    { cause: 'Landing page issues', contribution: 25 },
+                    { cause: 'Broad match keyword drift', contribution: 20 },
+                    { cause: 'Market conditions changed', contribution: 10 },
+                ],
+                suggested_action: 'Review search terms report and add negatives for low-quality queries.',
+            });
+        }
 
-        const intentMixShift = {
-            high_intent_percent: highIntentPercent,
-            medium_intent_percent: medIntentPercent,
-            low_intent_percent: lowIntentPercent,
-            previous: previous ? {
-                high_intent_percent: Math.round(prevHighIntent),
-                medium_intent_percent: Math.round(100 - prevHighIntent - prevLowIntent),
-                low_intent_percent: Math.round(prevLowIntent),
-            } : null,
-            shift_direction: lowIntentPercent > prevLowIntent + 5 ? 'toward_low' :
-                highIntentPercent > prevHighIntent + 5 ? 'toward_high' : 'stable',
-            shift_magnitude: Math.abs(lowIntentPercent - prevLowIntent),
-            is_significant: Math.abs(lowIntentPercent - prevLowIntent) > 10,
-            explanation_beginner: lowIntentPercent > 30
-                ? `Traffic quality shifted toward lower intent queries (+${Math.round(lowIntentPercent - prevLowIntent)}%). This means more clicks but fewer conversions.`
-                : highIntentPercent > prevHighIntent
-                    ? 'Traffic quality improved — more serious buyers are clicking.'
-                    : 'Traffic quality is stable.',
-            explanation_advanced: `Intent distribution shifted: High ${Math.round(prevHighIntent)}%→${highIntentPercent}%, Low ${Math.round(prevLowIntent)}%→${lowIntentPercent}%.`,
-        };
+        // Issue: CPC increased
+        if (cpcChange > 15) {
+            detectedIssues.push({
+                id: 'cpc_increase',
+                severity: cpcChange > 30 ? 'critical' : 'important',
+                title: 'Cost Per Click Increased',
+                summary_beginner: `You're paying more per click (+${cpcChange.toFixed(0)}%). Competition may have increased, or your Quality Score dropped.`,
+                summary_advanced: `CPC rose ${cpcChange.toFixed(1)}% ($${prevCpc.toFixed(2)} → $${currCpc.toFixed(2)}). Check auction insights and QS trends.`,
+                root_causes: [
+                    { cause: 'Competitor bid increase', contribution: 40 },
+                    { cause: 'Quality Score decline', contribution: 35 },
+                    { cause: 'Increased auction pressure', contribution: 25 },
+                ],
+                suggested_action: 'Improve ad relevance or adjust bidding strategy.',
+            });
+        }
 
-        // Metrics calculations
-        const currCtr = current.clicks / current.impressions;
-        const currCvr = current.conversions / current.clicks;
-        const currCpc = current.cost / current.clicks;
-        const currCpa = current.cost / Math.max(1, current.conversions);
+        // Issue: Lost impression share (budget)
+        if (current.lost_is_budget > 0.2) {
+            detectedIssues.push({
+                id: 'budget_limited',
+                severity: current.lost_is_budget > 0.35 ? 'critical' : 'important',
+                title: 'Budget Running Out Early',
+                summary_beginner: `Your budget is depleting before peak hours. You're missing ${Math.round(current.lost_is_budget * 100)}% of potential impressions.`,
+                summary_advanced: `Lost IS (budget): ${Math.round(current.lost_is_budget * 100)}%. Ads stopping before evening peak hours.`,
+                root_causes: [
+                    { cause: 'Daily budget too low', contribution: 50 },
+                    { cause: 'High bid strategy depleting budget', contribution: 30 },
+                    { cause: 'No dayparting schedule', contribution: 20 },
+                ],
+                suggested_action: 'Increase budget or enable ad scheduling for peak hours.',
+            });
+        }
 
-        const prevCtr = previous ? previous.clicks / previous.impressions : currCtr;
-        const prevCvr = previous ? previous.conversions / previous.clicks : currCvr;
-        const prevCpc = previous ? previous.cost / previous.clicks : currCpc;
+        // ========== POSITIVE OUTCOME DETECTION ==========
 
-        const ctrChange = (currCtr - prevCtr) / prevCtr;
-        const cvrChange = (currCvr - prevCvr) / prevCvr;
+        // Positive: CVR improved (especially if decisions were applied)
+        if (cvrChange > 15) {
+            positiveOutcomes.push({
+                id: 'cvr_improved',
+                title: 'Conversion Rate Improved',
+                summary: negativesAdded || matchTypesTightened
+                    ? `Your targeting changes are working! CVR up ${cvrChange.toFixed(0)}%.`
+                    : `CVR improved by ${cvrChange.toFixed(0)}%. Market conditions may have shifted favorably.`,
+                likely_cause: negativesAdded ? 'Added negative keywords filtered out junk traffic' :
+                    matchTypesTightened ? 'Tighter match types improved relevance' : 'Market improvement',
+            });
+        }
 
+        // Positive: CPA decreased
+        if (cpaChange < -10) {
+            positiveOutcomes.push({
+                id: 'cpa_improved',
+                title: 'Cost Per Acquisition Decreased',
+                summary: `You're acquiring customers more efficiently. CPA down ${Math.abs(cpaChange).toFixed(0)}%.`,
+                likely_cause: negativesAdded || matchTypesTightened ? 'Your decisions improved targeting quality' : 'Better market conditions',
+            });
+        }
+
+        // Positive: ROAS improved
+        if (roasChange > 15) {
+            positiveOutcomes.push({
+                id: 'roas_improved',
+                title: 'Return on Ad Spend Improved',
+                summary: `Your campaign efficiency increased. ROAS up ${roasChange.toFixed(0)}% to ${currRoas.toFixed(2)}x.`,
+                likely_cause: 'Better targeting or conversion optimization',
+            });
+        }
+
+        // ========== CONFLICTING SIGNALS ==========
         const conflictingSignals: any[] = [];
-        if (ctrChange > 0.05 && cvrChange < -0.03) {
+
+        if (ctrChange > 10 && cvrChange < -10) {
             conflictingSignals.push({
                 id: 'ctr_up_cvr_down',
-                signal_a: { metric: 'CTR', direction: 'up', change: Math.round(ctrChange * 100) },
-                signal_b: { metric: 'CVR', direction: 'down', change: Math.round(cvrChange * 100) },
-                explanation_beginner: 'More people are clicking, but fewer are converting.',
-                explanation_advanced: `CTR increased ${Math.round(ctrChange * 100)}% while CVR declined ${Math.abs(Math.round(cvrChange * 100))}%.`,
+                signal_a: { metric: 'CTR', direction: 'up', change: Math.round(ctrChange) },
+                signal_b: { metric: 'CVR', direction: 'down', change: Math.round(cvrChange) },
+                explanation_beginner: 'More people are clicking, but fewer are converting. This suggests you\'re attracting lower-quality traffic.',
+                explanation_advanced: `CTR +${ctrChange.toFixed(1)}% but CVR ${cvrChange.toFixed(1)}%. Likely cause: broad match expansion to lower-intent queries.`,
                 likely_cause: 'intent_mix_shift',
             });
         }
 
-        // Crisis/Recovery detection
-        const isCrisisDay = dayNumber === 3 && lowIntentPercent > 35;
-        const isRecoveryDay = dayNumber >= 4 && lowIntentPercent < 30;
+        if (impressionChange < -20 && cvrChange > 10) {
+            conflictingSignals.push({
+                id: 'volume_down_quality_up',
+                signal_a: { metric: 'Impressions', direction: 'down', change: Math.round(impressionChange) },
+                signal_b: { metric: 'CVR', direction: 'up', change: Math.round(cvrChange) },
+                explanation_beginner: 'You\'re getting fewer impressions, but the traffic you DO get is converting better. This is the expected trade-off from tightening targeting.',
+                explanation_advanced: `Volume-quality trade-off active. Impressions ${impressionChange.toFixed(0)}% but CVR +${cvrChange.toFixed(0)}%.`,
+                likely_cause: matchTypesTightened ? 'match_type_tightening' : 'targeting_improvement',
+            });
+        }
 
-        const learningFlowState = {
-            is_crisis_day: isCrisisDay,
-            is_recovery_day: isRecoveryDay,
-            crisis_message_beginner: isCrisisDay ? {
-                title: 'High Waste Detected',
-                severity: 'critical',
-                summary: 'Your broad match keywords are showing ads to people searching for informational queries.',
-                action: 'Add negative keywords to block irrelevant traffic.',
-                suggested_negatives: ['free', 'jobs', 'salary', 'what is'],
-            } : null,
-            crisis_message_advanced: isCrisisDay ? {
-                title: 'High Waste Detected',
-                severity: 'critical',
-                waste_percent: lowIntentPercent,
-                summary: `${lowIntentPercent}% of spend on low-intent traffic.`,
-                root_cause_chain: [
-                    { cause: 'Broad match expanded to informational queries', contribution: 45 },
-                    { cause: 'Low-intent users clicked but didn\'t convert', contribution: 30 },
-                    { cause: 'Quality Score erosion from poor CTR', contribution: 15 },
-                    { cause: 'CPC increased due to lower Quality Score', contribution: 10 },
-                ],
-                tradeoff: 'Adding negatives will reduce volume 25-35% but improve CVR 40-60%.',
-                expected_outcome: 'CPA $22-26 (vs current estimate)',
-            } : null,
-            recovery_message: isRecoveryDay ? {
-                title: 'You traded volume for quality. This is expected.',
-                summary: 'Same conversions, much lower cost.',
-                metrics_comparison: {
-                    before: { impressions: 3000, conversions: 4, cpa: 38 },
-                    after: { impressions: 1800, conversions: 4, cpa: 24 },
-                },
-            } : null,
-        };
-
-        // Build metric changes - using arrow function to avoid ES5 strict mode error
+        // ========== BUILD METRIC CHANGES ==========
         const buildMetricChange = (prevVal: number, currVal: number, metricName: string) => {
             const prev = prevVal || currVal;
             const changePercent = prev === 0 ? 0 : ((currVal - prev) / prev) * 100;
-            const direction = Math.abs(changePercent) < 1 ? 'flat' : (changePercent > 0 ? 'up' : 'down');
+            const direction = Math.abs(changePercent) < 2 ? 'flat' : (changePercent > 0 ? 'up' : 'down');
+
+            // Generate dynamic drivers based on actual changes
+            const drivers: any[] = [];
+
+            if (metricName === 'cpc' && changePercent > 5) {
+                drivers.push({
+                    id: 'competition',
+                    cause: 'competition_increase',
+                    label: 'Competition Increased',
+                    impact_percent: 40 + Math.round(Math.random() * 20),
+                    explanation: 'Competitors may have raised bids.',
+                });
+                if (!negativesAdded) {
+                    drivers.push({
+                        id: 'targeting',
+                        cause: 'broad_targeting',
+                        label: 'Broad Targeting Active',
+                        impact_percent: 30 + Math.round(Math.random() * 15),
+                        explanation: 'Consider tightening match types.',
+                    });
+                }
+            } else if (metricName === 'cvr' && changePercent < -5) {
+                drivers.push({
+                    id: 'traffic_quality',
+                    cause: 'lower_intent',
+                    label: 'Lower Intent Traffic',
+                    impact_percent: 45 + Math.round(Math.random() * 15),
+                    explanation: 'Traffic quality has declined.',
+                });
+            } else if (metricName === 'cvr' && changePercent > 5 && (negativesAdded || matchTypesTightened)) {
+                drivers.push({
+                    id: 'your_decision',
+                    cause: 'targeting_improvement',
+                    label: 'Your Targeting Decisions',
+                    impact_percent: 60 + Math.round(Math.random() * 20),
+                    explanation: 'Your changes improved traffic quality!',
+                });
+            }
 
             return {
                 previous: Math.round(prev * 10000) / 10000,
                 current: Math.round(currVal * 10000) / 10000,
                 change_percent: Math.round(changePercent * 100) / 100,
                 direction,
-                drivers: [
-                    {
-                        id: 'competitor_bid_increase',
-                        cause: 'competitor_bid_increase',
-                        label: 'Competitor Bid Increase',
-                        impact_percent: 45,
-                        explanation: 'A competitor raised their bids.',
-                        explanation_advanced: 'Competitor increased max CPC by 35%.',
-                        segment_evidence: []
-                    },
-                    {
-                        id: 'quality_score_decrease',
-                        cause: 'quality_score_decrease',
-                        label: 'Quality Score Dropped',
-                        impact_percent: 35,
-                        explanation: 'Your Quality Score decreased.',
-                        explanation_advanced: 'Avg QS dropped from 7.2 to 5.8.',
-                        segment_evidence: []
-                    }
-                ]
+                drivers,
             };
         };
+
+        // ========== OVERALL ASSESSMENT ==========
+        const hasCriticalIssues = detectedIssues.some(i => i.severity === 'critical');
+        const hasPositiveOutcomes = positiveOutcomes.length > 0;
+
+        let overallStatus = 'stable';
+        let overallMessage = 'Performance is within normal ranges.';
+
+        if (hasCriticalIssues) {
+            overallStatus = 'needs_attention';
+            overallMessage = detectedIssues.find(i => i.severity === 'critical')?.title || 'Critical issues detected.';
+        } else if (hasPositiveOutcomes && detectedIssues.length === 0) {
+            overallStatus = 'improving';
+            overallMessage = positiveOutcomes[0]?.title || 'Campaign is improving.';
+        } else if (detectedIssues.length > 0) {
+            overallStatus = 'watch';
+            overallMessage = 'Some areas need monitoring.';
+        }
 
         return NextResponse.json({
             run_id: runId,
             day_number: dayNumber,
             previous_day: previous ? dayNumber - 1 : null,
             is_first_day: !previous,
-            intent_mix_shift: intentMixShift,
+
+            // Overall assessment
+            overall_status: overallStatus,
+            overall_message: overallMessage,
+
+            // Data-driven issues and outcomes
+            detected_issues: detectedIssues,
+            positive_outcomes: positiveOutcomes,
             conflicting_signals: conflictingSignals,
-            has_conflicting_signals: conflictingSignals.length > 0,
-            learning_flow: learningFlowState,
+            has_issues: detectedIssues.length > 0,
+            has_positive_outcomes: positiveOutcomes.length > 0,
+
+            // Decision attribution
+            decisions_active: {
+                negatives_added: negativesAdded,
+                match_types_tightened: matchTypesTightened,
+                budget_changed: budgetChanged,
+            },
+
+            // Metric changes
             metrics: {
                 cpc: buildMetricChange(prevCpc, currCpc, 'cpc'),
                 ctr: buildMetricChange(prevCtr, currCtr, 'ctr'),
                 cvr: buildMetricChange(prevCvr, currCvr, 'cvr'),
+                cpa: buildMetricChange(prevCpa, currCpa, 'cpa'),
+                roas: buildMetricChange(prevRoas, currRoas, 'roas'),
                 conversions: buildMetricChange(
                     previous ? previous.conversions : current.conversions,
                     current.conversions,
@@ -471,25 +604,75 @@ export async function GET(
     const searchTermsMatch = fullPath.match(/^\/runs\/([^/]+)\/search-terms-analysis$/);
     if (searchTermsMatch) {
         const runId = searchTermsMatch[1];
+        const run = storage.runs.find(r => r.id === runId);
+        const runResults = storage.dailyResults.filter(r => r.run_id === runId);
+        const latestResult = runResults.length > 0 ? runResults[runResults.length - 1] : null;
+
+        // Calculate waste based on decisions
+        const decisions = run?.decisions_applied || [];
+        const negativesAdded = decisions.some((d: any) => d.addNegativeKeywords);
+        const matchTypesTightened = decisions.some((d: any) => d.tightenMatchTypes);
+
+        // Base waste decreases with good decisions
+        let baseWastePercent = 25 + Math.floor(Math.random() * 15); // 25-40%
+        if (negativesAdded) baseWastePercent -= 15;
+        if (matchTypesTightened) baseWastePercent -= 8;
+        baseWastePercent = Math.max(5, baseWastePercent);
+
+        const totalCost = latestResult?.cost || 100;
+        const wasteAmount = Math.round((totalCost * (baseWastePercent / 100)) * 100) / 100;
+
+        // Generate varied harmful queries based on day/seed
+        const seed = (run?.rng_seed || 12345) + (runResults.length * 17);
+        const queries = [
+            { query: 'plumber salary dubai', classification: 'Low Intent', spendBase: 23.50, explanation: 'Informational query - job seekers not customers', suggested_negative: 'salary' },
+            { query: 'how to fix leaky faucet', classification: 'Low Intent', spendBase: 18.20, explanation: 'DIY intent - not looking to hire', suggested_negative: 'how to' },
+            { query: 'free plumber services', classification: 'Off-Topic', spendBase: 15.80, explanation: 'Price-sensitive, unlikely to convert', suggested_negative: 'free' },
+            { query: 'plumber jobs near me', classification: 'Low Intent', spendBase: 12.40, explanation: 'Employment search not service seeker', suggested_negative: 'jobs' },
+            { query: 'what does a plumber do', classification: 'Informational', spendBase: 8.90, explanation: 'Research query with no purchase intent', suggested_negative: 'what does' },
+            { query: 'cheapest plumber', classification: 'Low Value', spendBase: 11.20, explanation: 'Extreme price sensitivity indicates low lifetime value', suggested_negative: 'cheapest' },
+            { query: 'plumber training course', classification: 'Off-Topic', spendBase: 9.50, explanation: 'Education seekers not customers', suggested_negative: 'training' },
+        ];
+
+        // Filter out queries if negatives were added
+        const activeQueries = negativesAdded
+            ? queries.slice(3).map(q => ({ ...q, spend: q.spendBase * 0.3 })) // Show only new ones, reduced spend
+            : queries.slice(0, 4).map(q => ({ ...q, spend: q.spendBase * (0.8 + Math.random() * 0.4) }));
+
+        // Severity based on current waste level
+        const severity = baseWastePercent > 25 ? 'high' : baseWastePercent > 15 ? 'medium' : 'low';
+        const trend = negativesAdded ? 'decreasing' : 'increasing';
+
         return NextResponse.json({
             run_id: runId,
             wasted_spend: {
-                amount: 141.23,
-                percent: 22,
-                severity: 'high',
-                trend: 'increasing',
-                query_count: 47
+                amount: wasteAmount,
+                percent: baseWastePercent,
+                severity,
+                trend,
+                query_count: activeQueries.length + Math.floor(Math.random() * 20) + 10,
+                improvement_message: negativesAdded
+                    ? `Great! Waste reduced from ~35% to ${baseWastePercent}% since you added negative keywords.`
+                    : null,
             },
-            harmful_queries: [
-                { query: 'plumber salary dubai', classification: 'Low Intent', spend: 23.50, explanation: 'Informational query', suggested_negative: 'salary' },
-                { query: 'how to fix leaky faucet', classification: 'Low Intent', spend: 18.20, explanation: 'DIY intent', suggested_negative: 'how to' },
-                { query: 'free plumber services', classification: 'Off-Topic', spend: 15.80, explanation: 'Price-sensitive, unlikely to convert', suggested_negative: 'free' },
-            ],
+            harmful_queries: activeQueries.map(q => ({
+                query: q.query,
+                classification: q.classification,
+                spend: Math.round(q.spend * 100) / 100,
+                explanation: q.explanation,
+                suggested_negative: q.suggested_negative,
+            })),
             negative_suggestions: [
-                { keyword: 'salary', potential_savings: 45.30, confidence: 0.92 },
-                { keyword: 'free', potential_savings: 38.50, confidence: 0.88 },
-                { keyword: 'jobs', potential_savings: 28.20, confidence: 0.85 },
-            ]
+                { keyword: 'salary', potential_savings: negativesAdded ? 5.30 : 45.30, confidence: 0.92, already_added: negativesAdded },
+                { keyword: 'free', potential_savings: negativesAdded ? 8.50 : 38.50, confidence: 0.88, already_added: negativesAdded },
+                { keyword: 'jobs', potential_savings: negativesAdded ? 4.20 : 28.20, confidence: 0.85, already_added: negativesAdded },
+                { keyword: 'how to', potential_savings: negativesAdded ? 3.10 : 22.10, confidence: 0.80, already_added: negativesAdded },
+            ],
+            decisions_impact: {
+                negatives_added: negativesAdded,
+                match_types_tightened: matchTypesTightened,
+                estimated_waste_reduction: negativesAdded ? '40-60%' : null,
+            }
         });
     }
 
@@ -620,7 +803,8 @@ export async function POST(
                 status: 'pending',
                 current_day: 0,
                 duration_days: 30,
-                rng_seed: Math.floor(Math.random() * 100000),
+                rng_seed: Date.now() % 100000, // More random seed
+                decisions_applied: [],
                 created_at: new Date().toISOString(),
             };
             storage.runs.push(run);
@@ -636,23 +820,114 @@ export async function POST(
             run.started_at = new Date().toISOString();
         }
 
-        const rng = (run.rng_seed || 12345) + run.current_day;
-        const rand = (n: number) => ((rng * n * 9301 + 49297) % 233280) / 233280;
+        // Parse decisions from request body
+        const decisions = body.decisions || {};
+        if (Object.keys(decisions).length > 0) {
+            run.decisions_applied = run.decisions_applied || [];
+            run.decisions_applied.push({
+                day: run.current_day,
+                ...decisions
+            });
+        }
+
+        // Get previous day results for comparison
+        const previousResults = storage.dailyResults.filter(r => r.run_id === runId);
+        const previousDay = previousResults.find(r => r.day_number === run.current_day - 1);
+
+        // ========== DYNAMIC METRIC GENERATION ==========
+        // Base seed with day variance
+        const baseSeed = (run.rng_seed || 12345);
+        const daySeed = baseSeed + (run.current_day * 7919); // Prime multiplier for variety
+        const rand = (n: number) => {
+            const x = Math.sin(daySeed * n) * 10000;
+            return x - Math.floor(x);
+        };
+
+        // Market volatility - varies significantly day to day
+        const volatilityFactor = 0.3 + rand(100) * 0.5; // 30%-80% variance
+        const marketTrend = rand(101) > 0.5 ? 1 : -1; // Random up/down trend
+
+        // Calculate decision modifiers
+        let negativeImpact = 0;
+        let matchTypeImpact = 0;
+        let budgetModifier = 1;
+
+        const allDecisions = run.decisions_applied || [];
+        for (const d of allDecisions) {
+            if (d.addNegativeKeywords) negativeImpact += 0.15; // Reduces waste
+            if (d.tightenMatchTypes) matchTypeImpact += 0.10; // Reduces waste, reduces volume
+            if (d.budgetAdjustment === 'increase_20') budgetModifier *= 1.2;
+            if (d.budgetAdjustment === 'decrease_20') budgetModifier *= 0.8;
+        }
+
+        // Base metrics with variance
+        const baseImpressions = 500 + rand(1) * 2500;
+        const baseCtr = 0.03 + rand(2) * 0.05;
+        const baseCvr = 0.02 + rand(3) * 0.04;
+        const baseCpc = 2 + rand(4) * 5;
+
+        // Apply volatility and trends
+        const impressionSwing = 1 + (marketTrend * volatilityFactor * 0.3);
+        const ctrSwing = 1 + (rand(5) - 0.5) * volatilityFactor * 0.4;
+        const cvrSwing = 1 + (rand(6) - 0.5) * volatilityFactor * 0.5;
+        const cpcSwing = 1 + (rand(7) - 0.5) * volatilityFactor * 0.3;
+
+        // Apply decision impacts
+        // Negatives: reduce volume but increase quality
+        const volumeReduction = matchTypeImpact * 0.25; // Tighter match = less volume
+        const qualityBoost = negativeImpact * 0.5 + matchTypeImpact * 0.3; // Better targeting
+
+        // Calculate final metrics
+        const impressions = Math.floor(
+            baseImpressions * impressionSwing * budgetModifier * (1 - volumeReduction)
+        );
+        const ctr = Math.min(0.15, Math.max(0.01, baseCtr * ctrSwing * (1 + qualityBoost * 0.3)));
+        const clicks = Math.floor(impressions * ctr);
+        const cvr = Math.min(0.12, Math.max(0.005, baseCvr * cvrSwing * (1 + qualityBoost * 0.5)));
+        const conversions = Math.max(0, Math.floor(clicks * cvr));
+        const cpc = Math.max(0.5, baseCpc * cpcSwing * (1 - qualityBoost * 0.15));
+        const cost = Math.round(clicks * cpc * 100) / 100;
+        const aov = 80 + rand(8) * 120; // Average order value
+        const revenue = Math.round(conversions * aov * 100) / 100;
+
+        // Calculate quality score based on decisions and performance
+        const baseQs = 0.5 + rand(9) * 0.3;
+        const qsBoost = qualityBoost * 0.2;
+        const avgQualityScore = Math.min(1, Math.max(0.3, baseQs + qsBoost));
+
+        // Impression share affected by budget and bidding
+        const baseIs = 0.4 + rand(10) * 0.4;
+        const impressionShare = Math.min(0.95, Math.max(0.3, baseIs * budgetModifier));
+
+        // Lost IS - realistic variance
+        const lostIsBudget = Math.max(0, 0.05 + rand(11) * 0.25 * (budgetModifier < 1 ? 1.5 : 0.7));
+        const lostIsRank = Math.max(0, 0.03 + rand(12) * 0.2 * (1 - qsBoost));
 
         const result = {
             id: uuid(),
             run_id: runId,
             day_number: run.current_day,
-            impressions: Math.floor(500 + rand(1) * 2000),
-            clicks: Math.floor(20 + rand(2) * 100),
-            conversions: Math.floor(1 + rand(3) * 15),
-            cost: Math.round((50 + rand(4) * 150) * 100) / 100,
-            revenue: Math.round((20 + rand(5) * 300) * 100) / 100,
-            avg_position: Math.round((1 + rand(6) * 3) * 10) / 10,
-            avg_quality_score: Math.round((0.4 + rand(7) * 0.4) * 100) / 100,
-            impression_share: Math.round((0.5 + rand(8) * 0.4) * 100) / 100,
-            lost_is_budget: Math.round(rand(9) * 0.3 * 100) / 100,
-            lost_is_rank: Math.round(rand(10) * 0.3 * 100) / 100,
+            impressions,
+            clicks,
+            conversions,
+            cost,
+            revenue,
+            ctr: Math.round(ctr * 10000) / 100, // As percentage
+            cvr: Math.round(cvr * 10000) / 100,
+            cpc: Math.round(cpc * 100) / 100,
+            cpa: conversions > 0 ? Math.round((cost / conversions) * 100) / 100 : 0,
+            roas: cost > 0 ? Math.round((revenue / cost) * 100) / 100 : 0,
+            avg_position: Math.round((1.5 + rand(13) * 2.5) * 10) / 10,
+            avg_quality_score: Math.round(avgQualityScore * 100) / 100,
+            impression_share: Math.round(impressionShare * 100) / 100,
+            lost_is_budget: Math.round(lostIsBudget * 100) / 100,
+            lost_is_rank: Math.round(lostIsRank * 100) / 100,
+            // Store decision state for this day
+            decisions_active: {
+                negatives_added: negativeImpact > 0,
+                match_types_tightened: matchTypeImpact > 0,
+                budget_modifier: budgetModifier,
+            },
             created_at: new Date().toISOString(),
         };
         storage.dailyResults.push(result);
