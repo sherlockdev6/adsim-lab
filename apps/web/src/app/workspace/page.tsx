@@ -228,20 +228,20 @@ function WorkspaceContent() {
             </div>
 
             {/* Metrics Overview */}
-            <div className="grid grid-cols-4" style={{ marginBottom: 'var(--space-8)' }}>
-                <div className="metric-card">
+            <div className="grid grid-cols-4 animate-stagger" style={{ marginBottom: 'var(--space-8)' }}>
+                <div className="metric-card metric-card-premium">
                     <div className="metric-value">{campaigns.length}</div>
                     <div className="metric-label">Campaigns</div>
                 </div>
-                <div className="metric-card">
+                <div className="metric-card metric-card-premium">
                     <div className="metric-value">{runs.length}</div>
                     <div className="metric-label">Total Runs</div>
                 </div>
-                <div className="metric-card">
+                <div className="metric-card metric-card-premium">
                     <div className="metric-value">{runs.filter(r => r.status === 'running').length}</div>
                     <div className="metric-label">Active Runs</div>
                 </div>
-                <div className="metric-card">
+                <div className="metric-card metric-card-premium">
                     <div className="metric-value">${account?.daily_budget || 100}</div>
                     <div className="metric-label">Daily Budget</div>
                 </div>
@@ -364,8 +364,8 @@ function WorkspaceContent() {
                                                 <td className="font-mono text-sm">{run.id.slice(0, 8)}...</td>
                                                 <td>
                                                     <span className={`badge badge-${run.status === 'completed' ? 'success' :
-                                                            run.status === 'running' ? 'warning' :
-                                                                'neutral'
+                                                        run.status === 'running' ? 'warning' :
+                                                            'neutral'
                                                         }`}>
                                                         <span className={`status-dot ${run.status}`} />
                                                         {run.status}
@@ -373,7 +373,7 @@ function WorkspaceContent() {
                                                 </td>
                                                 <td>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                                                        <div className="progress-bar" style={{ width: '100px' }}>
+                                                        <div className="progress-bar-premium" style={{ width: '100px' }}>
                                                             <div
                                                                 className="progress-fill"
                                                                 style={{ width: `${(run.current_day / run.duration_days) * 100}%` }}

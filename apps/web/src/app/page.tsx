@@ -49,7 +49,7 @@ export default function HomePage() {
 
             {/* Hero Section */}
             <section className="hero" style={{ paddingTop: '4rem', paddingBottom: '3rem' }}>
-                <div className="container">
+                <div className="container animate-fade-in">
                     <h1 className="hero-title">
                         Master Google Ads<br />Without the Risk
                     </h1>
@@ -58,8 +58,8 @@ export default function HomePage() {
                         Make mistakes, learn from data, and build expertise—without spending real money.
                     </p>
                     <div className="hero-actions">
-                        <Link href="/scenarios" className="btn btn-primary btn-lg">
-                            Start Simulation
+                        <Link href="/scenarios" className="btn btn-primary btn-lg btn-ripple animate-glow">
+                            🚀 Start Simulation
                         </Link>
                         <Link href="/login" className="btn btn-secondary btn-lg">
                             View Demo
@@ -71,7 +71,7 @@ export default function HomePage() {
             {/* Features Grid */}
             <section style={{ padding: 'var(--space-8) 0 var(--space-16)' }}>
                 <div className="container">
-                    <div className="grid grid-cols-3" style={{ marginBottom: 'var(--space-12)' }}>
+                    <div className="grid grid-cols-3 animate-stagger" style={{ marginBottom: 'var(--space-12)' }}>
                         <div className="text-center" style={{ padding: 'var(--space-6)' }}>
                             <div style={{
                                 fontSize: '2.5rem',
@@ -144,7 +144,7 @@ export default function HomePage() {
                     )}
 
                     {data?.scenarios && (
-                        <div className="grid grid-cols-3">
+                        <div className="grid grid-cols-3 animate-stagger">
                             {data.scenarios.map((scenario) => {
                                 const info = scenarioData[scenario.slug] || { cpc: 'N/A', competition: 'N/A', difficulty: 'N/A' };
                                 return (
