@@ -379,7 +379,27 @@ export default function ResultsPage() {
                                     queryCount={searchAnalysis.wasted_spend.query_count}
                                 />
                             )}
-                            {/* Performance Chart - Interactive */}
+
+                            {/* Ownership Summary - Show when user has made decisions */}
+                            {latestDecision && data && data.totals && (
+                                <OwnershipSummary
+                                    decision={latestDecision}
+                                    results={{
+                                        cost: data.totals.cost || 0,
+                                        conversions: data.totals.conversions || 0,
+                                        roas: data.totals.roas || 0,
+                                    }}
+                                    previousResults={
+                                        data.daily_results && data.daily_results.length > 1
+                                            ? {
+                                                cost: data.daily_results[data.daily_results.length - 2]?.cost || 0,
+                                                conversions: data.daily_results[data.daily_results.length - 2]?.conversions || 0,
+                                                roas: data.daily_results[data.daily_results.length - 2]?.roas || 0,
+                                            }
+                                            : undefined
+                                    }
+                                />
+                            )}                            {/* Performance Chart - Interactive */}
                             <div className="card">
                                 <div className="card-header">
                                     <div>

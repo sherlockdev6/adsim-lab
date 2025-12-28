@@ -81,19 +81,53 @@ interface LearningFlowState {
     } | null;
 }
 
+interface DetectedIssue {
+    id: string;
+    severity: 'critical' | 'important';
+    title: string;
+    summary_beginner: string;
+    summary_advanced: string;
+    root_causes: Array<{ cause: string; contribution: number }>;
+    suggested_action: string;
+}
+
+interface PositiveOutcome {
+    id: string;
+    title: string;
+    summary: string;
+    likely_cause: string;
+}
+
 interface CausalAnalysisData {
     run_id: string;
     day_number: number;
     previous_day: number | null;
     is_first_day: boolean;
-    intent_mix_shift: IntentMixShift;
+
+    // New data-driven fields
+    overall_status?: 'stable' | 'improving' | 'needs_attention' | 'watch';
+    overall_message?: string;
+    detected_issues?: DetectedIssue[];
+    positive_outcomes?: PositiveOutcome[];
+    has_issues?: boolean;
+    has_positive_outcomes?: boolean;
+    decisions_active?: {
+        negatives_added: boolean;
+        match_types_tightened: boolean;
+        budget_changed: boolean;
+    };
+
+    // Legacy fields (still supported)
+    intent_mix_shift?: IntentMixShift;
     conflicting_signals: ConflictingSignal[];
     has_conflicting_signals: boolean;
-    learning_flow: LearningFlowState;
+    learning_flow?: LearningFlowState;
     metrics: {
         cpc: MetricChange;
         ctr: MetricChange;
         cvr: MetricChange;
+        cpa?: MetricChange;
+        roas?: MetricChange;
         conversions: MetricChange;
         impression_share: MetricChange;
     };
@@ -305,6 +339,145 @@ export default function CausalInsightsPanel({ runId, selectedDay, onDayChange }:
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Data-Driven Overall Status Banner */}
+            {data?.overall_status && data.overall_status !== 'stable' && (
+                <div style={{
+                    padding: 'var(--space-4)',
+                    background: data.overall_status === 'improving'
+                        ? 'rgba(34, 197, 94, 0.15)'
+                        : data.overall_status === 'needs_attention'
+                            ? 'rgba(239, 68, 68, 0.15)'
+                            : 'rgba(245, 158, 11, 0.15)',
+                    border: `1px solid ${data.overall_status === 'improving'
+                        ? 'rgba(34, 197, 94, 0.3)'
+                        : data.overall_status === 'needs_attention'
+                            ? 'rgba(239, 68, 68, 0.3)'
+                            : 'rgba(245, 158, 11, 0.3)'}`,
+                    borderRadius: 'var(--radius-md)',
+                    marginBottom: 'var(--space-4)'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                        {data.overall_status === 'improving' ? (
+                            <TrendingUp size={18} style={{ color: 'var(--success)' }} />
+                        ) : data.overall_status === 'needs_attention' ? (
+                            <AlertTriangle size={18} style={{ color: 'var(--error)' }} />
+                        ) : (
+                            <Info size={18} style={{ color: 'var(--warning)' }} />
+                        )}
+                        <span style={{
+                            fontWeight: 600,
+                            color: data.overall_status === 'improving'
+                                ? 'var(--success)'
+                                : data.overall_status === 'needs_attention'
+                                    ? 'var(--error)'
+                                    : 'var(--warning)'
+                        }}>
+                            {data.overall_message}
+                        </span>
+                    </div>
+                </div>
+            )}
+
+            {/* Data-Driven Detected Issues */}
+            {data?.detected_issues && data.detected_issues.length > 0 && (
+                <div style={{ marginBottom: 'var(--space-4)' }}>
+                    <div className="text-xs text-muted" style={{ marginBottom: 'var(--space-2)', fontWeight: 600, textTransform: 'uppercase' }}>
+                        Issues Detected
+                    </div>
+                    {data.detected_issues.map((issue) => (
+                        <div key={issue.id} style={{
+                            padding: 'var(--space-3)',
+                            background: issue.severity === 'critical' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                            border: `1px solid ${issue.severity === 'critical' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
+                            borderRadius: 'var(--radius-md)',
+                            marginBottom: 'var(--space-2)'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
+                                <AlertTriangle size={14} style={{ color: issue.severity === 'critical' ? 'var(--error)' : 'var(--warning)', flexShrink: 0, marginTop: '2px' }} />
+                                <span style={{ fontWeight: 600, fontSize: '0.875rem', color: issue.severity === 'critical' ? 'var(--error)' : 'var(--warning)' }}>
+                                    {issue.title}
+                                </span>
+                            </div>
+                            <p className="text-sm" style={{ marginBottom: 'var(--space-2)', lineHeight: 1.5 }}>
+                                {mode === 'beginner' ? issue.summary_beginner : issue.summary_advanced}
+                            </p>
+                            {mode === 'advanced' && issue.root_causes && (
+                                <div style={{ marginBottom: 'var(--space-2)' }}>
+                                    {issue.root_causes.slice(0, 3).map((cause, i) => (
+                                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: '2px' }}>
+                                            <div style={{
+                                                width: `${cause.contribution}%`,
+                                                height: '3px',
+                                                background: `rgba(239, 68, 68, ${0.4 + cause.contribution / 100})`,
+                                                borderRadius: '2px',
+                                                minWidth: '15px'
+                                            }} />
+                                            <span className="text-xs text-muted">{cause.cause} ({cause.contribution}%)</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            <p className="text-xs" style={{ color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
+                                <Lightbulb size={12} />
+                                {issue.suggested_action}
+                            </p>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Data-Driven Positive Outcomes */}
+            {data?.positive_outcomes && data.positive_outcomes.length > 0 && (
+                <div style={{ marginBottom: 'var(--space-4)' }}>
+                    <div className="text-xs text-muted" style={{ marginBottom: 'var(--space-2)', fontWeight: 600, textTransform: 'uppercase' }}>
+                        Positive Outcomes
+                    </div>
+                    {data.positive_outcomes.map((outcome) => (
+                        <div key={outcome.id} style={{
+                            padding: 'var(--space-3)',
+                            background: 'rgba(34, 197, 94, 0.1)',
+                            border: '1px solid rgba(34, 197, 94, 0.3)',
+                            borderRadius: 'var(--radius-md)',
+                            marginBottom: 'var(--space-2)'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
+                                <TrendingUp size={14} style={{ color: 'var(--success)', flexShrink: 0, marginTop: '2px' }} />
+                                <span style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--success)' }}>
+                                    {outcome.title}
+                                </span>
+                            </div>
+                            <p className="text-sm" style={{ marginBottom: 'var(--space-1)', lineHeight: 1.5 }}>
+                                {outcome.summary}
+                            </p>
+                            <p className="text-xs text-muted">
+                                Likely cause: {outcome.likely_cause}
+                            </p>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Decision Attribution */}
+            {data?.decisions_active && (data.decisions_active.negatives_added || data.decisions_active.match_types_tightened) && (
+                <div style={{
+                    padding: 'var(--space-3)',
+                    background: 'rgba(59, 130, 246, 0.1)',
+                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                    borderRadius: 'var(--radius-md)',
+                    marginBottom: 'var(--space-4)'
+                }}>
+                    <div className="text-xs" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', color: 'var(--primary)' }}>
+                        <Info size={12} />
+                        <span>
+                            <strong>Your decisions are active:</strong>
+                            {data.decisions_active.negatives_added && ' Negative keywords added'}
+                            {data.decisions_active.negatives_added && data.decisions_active.match_types_tightened && ' •'}
+                            {data.decisions_active.match_types_tightened && ' Match types tightened'}
+                        </span>
                     </div>
                 </div>
             )}
