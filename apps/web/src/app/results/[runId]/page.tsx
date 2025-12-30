@@ -7,15 +7,13 @@ import { useState, useCallback, useEffect } from 'react';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, AreaChart, Area, ReferenceDot,
 } from 'recharts';
-import CoachingInsightsPanel, { generateCoachingInsights } from '@/components/CoachingInsightsPanel';
-import CausalInsightsPanel from '@/components/CausalInsightsPanel';
-import WastedSpendCard from '@/components/WastedSpendCard';
-import HarmfulQueriesWidget from '@/components/HarmfulQueriesWidget';
-import NegativeSuggestions from '@/components/NegativeSuggestions';
 import DecisionPanel from '@/components/DecisionPanel';
 import DecisionHistoryPanel from '@/components/DecisionHistoryPanel';
-import OwnershipSummary from '@/components/OwnershipSummary';
+import QuickStats from '@/components/QuickStats';
+import UnifiedInsights from '@/components/UnifiedInsights';
+import NegativeSuggestions from '@/components/NegativeSuggestions';
 import LearningProgress from '@/components/EducationalComponents';
+import OwnershipSummary from '@/components/OwnershipSummary';
 import { DecisionSet, UserLevel, RunDecision } from '@/types/decision-types';
 import { saveRunDecision, getLatestDecision } from '@/lib/decision-storage';
 import { Search, Lightbulb, Check, X, Info, BarChart3, MapPin } from 'lucide-react';
@@ -421,17 +419,6 @@ export default function ResultsPage() {
                                 </div>
                             )}
 
-                            {/* Wasted Spend Alert - Only show if there's data */}
-                            {searchAnalysis && searchAnalysis.wasted_spend && searchAnalysis.wasted_spend.amount > 0 && (
-                                <WastedSpendCard
-                                    runId={runId}
-                                    wastedAmount={searchAnalysis.wasted_spend.amount}
-                                    wastedPercent={searchAnalysis.wasted_spend.percent}
-                                    trendPercent={searchAnalysis.wasted_spend.trend_percent}
-                                    queryCount={searchAnalysis.wasted_spend.query_count}
-                                />
-                            )}
-
                             {/* Ownership Summary - Show when user has made decisions */}
                             {latestDecision && data && data.totals && (
                                 <OwnershipSummary
@@ -712,79 +699,43 @@ export default function ResultsPage() {
                                 </div>
                             )}
 
-                            {/* Tab Toggle */}
-                            <div className="btn-group-connected w-full">
-                                <button
-                                    className={`btn ${activeTab === 'causal' ? 'btn-primary' : 'btn-secondary'}`}
-                                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                                    onClick={() => setActiveTab('causal')}
-                                >
-                                    <Search size={16} /> Why Changed?
-                                </button>
-                                <button
-                                    className={`btn ${activeTab === 'coaching' ? 'btn-primary' : 'btn-secondary'}`}
-                                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                                    onClick={() => setActiveTab('coaching')}
-                                >
-                                    <Lightbulb size={16} /> Coaching
-                                </button>
-                            </div>
+                            {/* Quick Stats - Today's key metrics */}
+                            <QuickStats
+                                currentDay={data?.current_day || 0}
+                                todayResults={data?.daily_results?.length > 0
+                                    ? data.daily_results[data.daily_results.length - 1]
+                                    : null}
+                                previousResults={data?.daily_results?.length > 1
+                                    ? data.daily_results[data.daily_results.length - 2]
+                                    : null}
+                            />
 
-                            {/* Causal Insights Panel */}
-                            {activeTab === 'causal' && (
-                                <CausalInsightsPanel
-                                    runId={runId}
-                                    selectedDay={selectedDay}
-                                    onDayChange={setSelectedDay}
-                                />
-                            )}
+                            {/* Unified Insights - Merged coaching + causal */}
+                            <UnifiedInsights
+                                totals={data?.totals ? {
+                                    ctr: data.totals.ctr || 0,
+                                    cvr: data.totals.cvr || 0,
+                                    cpc: data.totals.cpc || 0,
+                                    roas: data.totals.roas || 0,
+                                    impression_share: data.totals.impression_share || 0.5,
+                                    lost_is_budget: data.totals.lost_is_budget || 0,
+                                    lost_is_rank: data.totals.lost_is_rank || 0,
+                                    avg_quality_score: data.totals.avg_quality_score || 0.5,
+                                } : null}
+                                wastedSpendPercent={searchAnalysis?.wasted_spend?.percent || 0}
+                                onAction={(id, action) => {
+                                    if (action === 'dismiss') {
+                                        addToast('Insight dismissed', 'info');
+                                    }
+                                }}
+                            />
 
-                            {/* Coaching Panel */}
-                            {activeTab === 'coaching' && (
-                                <CoachingInsightsPanel
-                                    insights={generateCoachingInsights({
-                                        ctr: data.totals?.ctr || 0,
-                                        cvr: data.totals?.cvr || 0,
-                                        cpc: data.totals?.cpc || 0,
-                                        impression_share: data.totals?.impression_share || 0.5,
-                                        lost_is_budget: data.totals?.lost_is_budget || 0,
-                                        lost_is_rank: data.totals?.lost_is_rank || 0,
-                                        avg_quality_score: data.totals?.avg_quality_score || 0.5,
-                                        wasted_spend_percent: searchAnalysis?.wasted_spend?.percent || 0,
-                                    })}
-                                    onInsightAction={(insightId, insightTitle, action) => {
-                                        // Log the coaching action
-                                        import('@/lib/decision-storage').then(({ logCoachingAction }) => {
-                                            logCoachingAction(runId, insightId, insightTitle, action);
-                                        });
-
-                                        // Show toast feedback
-                                        const actionMessages = {
-                                            apply: `Applied: ${insightTitle}`,
-                                            try_different: `Will try different approach for: ${insightTitle}`,
-                                            ignore: `Ignored: ${insightTitle}`,
-                                        };
-                                        addToast(actionMessages[action], action === 'apply' ? 'success' : 'info');
-                                    }}
-                                />
-                            )}
-
-                            {/* Harmful Queries Widget - Show when we have search analysis data */}
-                            {searchAnalysis && searchAnalysis.harmful_queries && searchAnalysis.harmful_queries.length > 0 && (
-                                <HarmfulQueriesWidget
-                                    runId={runId}
-                                    queries={searchAnalysis.harmful_queries}
-                                    totalHarmfulCount={searchAnalysis.wasted_spend?.query_count || searchAnalysis.harmful_queries.length}
-                                    onAddNegative={(keyword) => addToast(`Added negative: -${keyword}`, 'success')}
-                                />
-                            )}
-
-                            {/* Negative Suggestions - Show potential savings */}
-                            {searchAnalysis && searchAnalysis.negative_suggestions && searchAnalysis.negative_suggestions.length > 0 && (
+                            {/* Negative Suggestions - Actionable recommendations */}
+                            {searchAnalysis?.negative_suggestions && searchAnalysis.negative_suggestions.length > 0 && (
                                 <NegativeSuggestions
                                     suggestions={searchAnalysis.negative_suggestions}
                                     totalSavings={searchAnalysis.potential_savings?.total || 0}
-                                    onAddNegative={(keyword) => addToast(`Added negative: -${keyword}`, 'success')}
+                                    onAddNegative={(keyword: string) => addToast(`Added negative: -${keyword}`, 'success')}
                                     onAddAll={() => addToast('All negatives added!', 'success')}
                                 />
                             )}
