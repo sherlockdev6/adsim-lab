@@ -665,6 +665,53 @@ export default function ResultsPage() {
 
                         {/* Sidebar */}
                         <div className="dashboard-sidebar">
+                            {/* Run Controls - ALWAYS FIRST AND STICKY */}
+                            {!isComplete && (
+                                <div style={{ position: 'sticky', top: '80px', zIndex: 10 }}>
+                                    <DecisionPanel
+                                        onRun={handleDecisionRun}
+                                        isRunning={isRunning}
+                                        currentDay={data?.current_day || 0}
+                                        userLevel={userLevel}
+                                    />
+                                </div>
+                            )}
+
+                            {isComplete && (
+                                <div className="card" style={{
+                                    background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.05))',
+                                    border: '1px solid var(--success)',
+                                    position: 'sticky',
+                                    top: '80px',
+                                    zIndex: 10,
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                                        <div style={{
+                                            width: '36px',
+                                            height: '36px',
+                                            borderRadius: 'var(--radius-md)',
+                                            background: 'var(--success)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                        }}>
+                                            <Check size={20} color="white" />
+                                        </div>
+                                        <div>
+                                            <h3 style={{ margin: 0, fontSize: '0.9375rem' }}>Simulation Complete!</h3>
+                                            <p className="text-xs text-muted">30 days simulated</p>
+                                        </div>
+                                    </div>
+                                    <Link
+                                        href="/workspace"
+                                        className="btn btn-secondary w-full"
+                                        style={{ marginTop: 'var(--space-3)' }}
+                                    >
+                                        ← Start New Run
+                                    </Link>
+                                </div>
+                            )}
+
                             {/* Tab Toggle */}
                             <div className="btn-group-connected w-full">
                                 <button
@@ -744,27 +791,6 @@ export default function ResultsPage() {
 
                             {/* Learning Progress Tracker */}
                             <LearningProgress runId={runId} />
-
-                            {/* Quick Actions */}
-                            {/* Decision Panel - Inline Run Controls */}
-                            {!isComplete && (
-                                <DecisionPanel
-                                    onRun={handleDecisionRun}
-                                    isRunning={isRunning}
-                                    currentDay={data?.current_day || 0}
-                                    userLevel={userLevel}
-                                />
-                            )}
-
-                            {/* Back to Workspace */}
-                            <div className="card">
-                                <Link
-                                    href="/workspace"
-                                    className="btn btn-secondary w-full"
-                                >
-                                    ← Back to Workspace
-                                </Link>
-                            </div>
 
                             {/* Decision History Panel */}
                             <DecisionHistoryPanel
